@@ -839,24 +839,25 @@
         }
 
         function renderDisciplineTable() {
-            const month = document.getElementById("discMonth").value;
-            const cls = document.getElementById("discClass").value;
-            const students = DB.students.filter((s) => s.className === cls);
-            const container = document.getElementById("discTableContainer");
-            if (!students.length) { container.innerHTML = "<p>دانش‌آموزی نیست.</p>"; return; }
+    const month = document.getElementById("discMonth").value;
+    const cls = document.getElementById("discClass").value;
+    const students = DB.students.filter((s) => s.className === cls);
+    const container = document.getElementById("discTableContainer");
+    if (!students.length) { container.innerHTML = "<p>دانش‌آموزی نیست.</p>"; return; }
 
-            let html = `<table><thead><tr><th>ردیف</th><th>نام</th><th>انضباط</th><th>توضیحات</th></tr></thead><tbody>`;
-            students.forEach((s, i) => {
-                const current = DB.discipline[`${month}_${s.id}`] || { level: "", comment: "" };
-                html += `<tr data-id="${s.id}"><td>${i + 1}</td><td>${s.first} ${s.last}</td>
-                    <td><select class="disc-level"><option value="">انتخاب...</option>
-                        ${DB.disciplineLevels.map((l) => `<option ${current.level === l ? "selected" : ""}>${l}</option>`).join("")}
-                    </select></td>
-                    <td><input class="disc-comment" value="${current.comment}" placeholder="توضیح"></td>
-                </tr>`;
-            });
-            container.innerHTML = html + `</tbody></table>`;
-        }
+    let html = <table><thead><tr><th>ردیف</th><th>نام</th><th>انضباط</th><th>توضیحات</th></tr></thead><tbody>;
+    students.forEach((s, i) => {
+        // خواندن مقدار قبلی از دیتابیس
+        const current = DB.discipline[${month}_${s.id}] || { level: "", comment: "" };
+        html += <tr data-id="${s.id}"><td>${i + 1}</td><td>${s.first} ${s.last}</td>
+            <td><select class="disc-level"><option value="">انتخاب...</option>
+                ${DB.disciplineLevels.map((l) => <option ${current.level === l ? "selected" : ""}>${l}</option>).join("")}
+            </select></td>
+            <td><input class="disc-comment" value="${current.comment}" placeholder="توضیح"></td>
+        </tr>;
+    });
+    container.innerHTML = html + </tbody></table>;
+}
 
        async function saveDiscipline() {
     const month = document.getElementById("discMonth").value;
