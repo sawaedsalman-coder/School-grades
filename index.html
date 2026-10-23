@@ -207,7 +207,7 @@
                     </div>
                 </div>
 
-                <div id="sec-discipline" class="card hidden">
+                <div id="sec-discipline" class="card hidden" style="border-right: 5px solid #d35400;">
                     <h3>ثبت ارزشیابی انضباط</h3>
                     <div class="row">
                         <div class="field"><label>ماه</label><select id="discMonth" onchange="renderDisciplineTable()"></select></div>
@@ -414,6 +414,7 @@
 
             updateModalSubjects();
             updateSubjectsAndRender();
+            renderDisciplineTable();
         }
 
         function getSubjectsForClass(cls) {
@@ -436,6 +437,7 @@
             renderGradeTable();
         }
 
+        // --- مدیریت دبیران ---
         async function addTeacher() {
             const fullName = document.getElementById('tFullName').value.trim();
             const username = document.getElementById('tUsername').value.trim();
@@ -626,6 +628,7 @@
             }
         }
 
+        // --- بخش غیبت ---
         function onAbsenceFilterChange() {
             const month = document.getElementById("absMonth").value;
             const cls = document.getElementById("absClass").value;
@@ -729,6 +732,78 @@
             }
         }
 
+        // --- بخش انضباط (اصلاح‌شده) ---
+        function renderDisciplineTable() {
+            const month = document.getElementById("discMonth").value;
+            const cls = document.getElementById("discClass").value;
+            const students = DB.students.filter((s) => s.className === cls);
+            const container = document.getElementById("discTableContainer");
+            if (!students.length) { container.innerHTML = "<p>دانش‌آموزی نیست.</p>"; return; }
+
+            let html = `<table><thead><tr><th>ردیف</th><th>نام</th><th>انضباط</th><th>توضیحات</th></tr></thead><tbody>`;
+            students.forEach((s, i) => {
+                const current = DB.discipline[`${month}_${s.id}`] || { level: "", comment: "" };
+                html += `<tr data-id="${s.id}"><td>${i + 1}</td><td>${s.first} ${s.last}</td>
+                    <td><select class="disc-level"><option value="">انتخاب...</option>
+                        ${DB.disciplineLevels.map((l) => `<option ${current.level === l ? "selected" : ""}>${l}</option>`).join("")}
+                    </select></td>
+                    <td><input class="disc-comment" value="${current.comment}" placeholder="توضیح"></td>
+                </tr>`;
+            });
+            container.innerHTML = html + `</tbody></table>`;
+        }
+
+        async function saveDiscipline() {
+            const month = document.getElementById("discMonth").value;
+            const cls = document.getElementById("discClass").value;
+            if (!month || !cls) return showMsg("لطفاً ماه و کلاس را انتخاب کنید.", "error");
+
+            let records = [];
+            document.querySelectorAll("#discTableContainer tbody tr").forEach((tr) => {
+                const id = tr.dataset.id;
+                const level = tr.querySelector(".disc-level").value;
+                const comment = tr.querySelector(".disc-comment").value;
+                if (level) records.push({ student_id: id, month: month, level: level, comment: comment });
+            });
+
+            if (!records.length) return showMsg("هیچ موردی برای ذخیره انتخاب نشده است.", "error");
+
+            showMsg("در حال ذخیره انضباط...", "success");
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const record of records) {
+                try {
+                    const response = await fetch(`${SUPABASE_URL}/rest/v1/discipline?on_conflict=student_id,month`, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_KEY}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'resolution=merge-duplicates'
+                        },
+                        body: JSON.stringify(record)
+                    });
+
+                    if (response.ok) successCount++;
+                    else errorCount++;
+                    
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                } catch (err) {
+                    errorCount++;
+                }
+            }
+
+            if (errorCount > 0) {
+                showMsg(`${successCount} مورد ذخیره شد. ${errorCount} مورد خطا داد.`, "error");
+            } else {
+                showMsg(`تغییرات با موفقیت ذخیره شد. (${successCount} مورد)`, "success");
+                await loadFromServer();
+                renderDisciplineTable();
+            }
+        }
+
+        // --- سایر توابع ---
         function downloadExcelTemplate() {
             let csvContent = "\uFEFFنام,نام خانوادگی,کلاس,کد ملی\nمحمد,رضایی,نهم دو,1234567890\n";
             const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -837,81 +912,6 @@
                 } catch (err) { showMsg("خطا: " + err.message, "error"); }
             }
         }
-
-        function renderDisciplineTable() {
-    const month = document.getElementById("discMonth").value;
-    const cls = document.getElementById("discClass").value;
-    const students = DB.students.filter((s) => s.className === cls);
-    const container = document.getElementById("discTableContainer");
-    if (!students.length) { container.innerHTML = "<p>دانش‌آموزی نیست.</p>"; return; }
-
-    let html = <table><thead><tr><th>ردیف</th><th>نام</th><th>انضباط</th><th>توضیحات</th></tr></thead><tbody>;
-    students.forEach((s, i) => {
-        // خواندن مقدار قبلی از دیتابیس
-        const current = DB.discipline[${month}_${s.id}] || { level: "", comment: "" };
-        html += <tr data-id="${s.id}"><td>${i + 1}</td><td>${s.first} ${s.last}</td>
-            <td><select class="disc-level"><option value="">انتخاب...</option>
-                ${DB.disciplineLevels.map((l) => <option ${current.level === l ? "selected" : ""}>${l}</option>).join("")}
-            </select></td>
-            <td><input class="disc-comment" value="${current.comment}" placeholder="توضیح"></td>
-        </tr>;
-    });
-    container.innerHTML = html + </tbody></table>;
-}
-
-       async function saveDiscipline() {
-    const month = document.getElementById("discMonth").value;
-    const cls = document.getElementById("discClass").value;
-    if (!month || !cls) return showMsg("لطفاً ماه و کلاس را انتخاب کنید.", "error");
-
-    let records = [];
-    document.querySelectorAll("#discTableContainer tbody tr").forEach((tr) => {
-        const id = tr.dataset.id;
-        const level = tr.querySelector(".disc-level").value;
-        const comment = tr.querySelector(".disc-comment").value;
-        // فقط ردیف‌هایی که سطح انضباط برایشان انتخاب شده است
-        if (level) {
-            records.push({ student_id: id, month: month, level: level, comment: comment });
-        }
-    });
-
-    if (!records.length) return showMsg("هیچ موردی برای ذخیره انتخاب نشده است.", "error");
-
-    showMsg("در حال ذخیره انضباط...", "success");
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const record of records) {
-        try {
-            // استفاده از on_conflict برای آپدیت کردن در صورت وجود
-            const response = await fetch(${SUPABASE_URL}/rest/v1/discipline?on_conflict=student_id,month, {
-                method: 'POST',
-                headers: {
-                    'apikey': SUPABASE_KEY,
-                    'Authorization': Bearer ${SUPABASE_KEY},
-                    'Content-Type': 'application/json',
-                    'Prefer': 'resolution=merge-duplicates'
-                },
-                body: JSON.stringify(record)
-            });
-
-            if (response.ok) successCount++;
-            else errorCount++;
-            
-            await new Promise(resolve => setTimeout(resolve, 50));
-        } catch (err) {
-            errorCount++;
-        }
-    }
-
-    if (errorCount > 0) {
-        showMsg(${successCount} مورد ذخیره شد. ${errorCount} مورد خطا داد., "error");
-    } else {
-        showMsg(تغییرات با موفقیت ذخیره شد. (${successCount} مورد), "success");
-        await loadFromServer();
-        renderDisciplineTable(); // رفرش جدول
-    }
-}
 
         function renderGradeTable() {
             const month = document.getElementById("gradeMonth").value;
