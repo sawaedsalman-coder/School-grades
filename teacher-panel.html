@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل دبیران</title>
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --blue: #1769aa; --bg: #f4f7fb; --card: #fff; --line: #d7e1ea; }
+        body { font-family: 'Vazirmatn', Tahoma, sans-serif; margin: 0; background: var(--bg); color: #183044; }
+        header { background: linear-gradient(120deg, #125b99, #268bc0); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { margin: 0; font-size: 20px; }
+        .container { max-width: 800px; margin: 30px auto; padding: 0 15px; }
+        .card { background: var(--card); border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid var(--line); }
+        .hidden { display: none !important; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0 15px; border: 1px solid #bdcbd7; border-radius: 6px; font-family: inherit; box-sizing: border-box; }
+        button { background: var(--blue); color: white; border: none; padding: 12px 20px; border-radius: 6px; font-family: inherit; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; }
+        button:hover { opacity: 0.9; }
+        button.secondary { background: #526879; }
+        button.success { background: #28a745; }
+        button.danger { background: #c0392b; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 10px; border-bottom: 1px solid var(--line); text-align: right; }
+        th { background: #eaf4fb; }
+        #message { padding: 12px; margin-bottom: 15px; border-radius: 6px; text-align: center; display: none; font-weight: bold; }
+        .msg-error { background: #f8d7da; color: #721c24; }
+        .msg-success { background: #d4edda; color: #155724; }
+        .row { display: flex; gap: 15px; }
+        .row > div { flex: 1; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>سامانه ثبت نمرات دبیران</h1>
+        <button id="logoutBtn" class="danger hidden" onclick="logout()" style="width: auto; padding: 5px 15px; font-size: 13px;">خروج</button>
+    </header>
+    <div class="container">
+        <div id="message"></div>
+
+        <div id="loginBox" class="card">
+            <h3 style="margin-top:0; color:var(--blue);">ورود دبیر</h3>
+            <label>نام کاربری</label>
+            <input type="text" id="username" placeholder="نام کاربری خود را وارد کنید">
+            <label>رمز عبور</label>
+            <input type="password" id="password" placeholder="****">
+            <button onclick="login()">ورود به سیستم</button>
+        </div>
+
+        <div id="teacherPanel" class="hidden">
+            <div class="card">
+                <h3 id="welcomeText" style="margin-top:0; color:var(--blue);">خوش آمدید</h3>
+                
+                <div class="row">
+                    <div>
+                        <label>کلاس (تخصیص یافته)</label>
+                        <select id="selectClass" onchange="updateSubjects()"></select>
+                    </div>
+                    <div>
+                        <label>درس (تخصیص یافته)</label>
+                        <select id="selectSubject" onchange="loadStudentsAndGrades()"></select>
+                    </div>
+                </div>
+                <div>
+                    <label>ماه</label>
+                    <select id="selectMonth" onchange="loadStudentsAndGrades()">
+                        <option>مهر ۱۴۰۵</option>
+                        <option>آبان ۱۴۰۵</option>
+                        <option>آذر ۱۴۰۵</option>
+                        <option>دی ۱۴۰۵</option>
+                        <option>بهمن ۱۴۰۵</option>
+                        <option>اسفند ۱۴۰۵</option>
+                        <option>فروردین ۱۴۰۶</option>
+                        <option>اردیبهشت ۱۴۰۶</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top:0;">لیست دانش‌آموزان و نمرات</h3>
+                <div id="studentsTableContainer">
+                    <p style="color:#666;">ابتدا کلاس، درس و ماه را انتخاب کنید.</p>
+                </div>
+                <button class="success" onclick="saveGrades()" style="margin-top: 20px;">ذخیره نمرات</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://efihrvgakezpbymjgjiu.supabase.co"; 
+        const SUPABASE_KEY = "sb_publishable_zKl_1r6F-8uCIrym5OURSA_ZE2r3-V1"; 
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let currentTeacher = null;
+        let teacherAssignments = []; // ذخیره تخصیص‌های این دبیر
+
+        function showMessage(text, isError = false) {
+            const el = document.getElementById('message');
+            el.textContent = text;
+            el.className = isError ? 'msg-error' : 'msg-success';
+            el.style.display = 'block';
+            window.scrollTo(0, 0);
+            setTimeout(() => el.style.display = 'none', 4000);
+        }
+
+        async function login() {
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            if (!user || !pass) return showMessage('نام کاربری و رمز را وارد کنید.', true);
+
+            showMessage('در حال بررسی...');
+
+            try {
+                const { data: teachers, error } = await supabaseClient.from('teachers').select('*').eq('username', user);
+                if (error) throw new Error(error.message);
+                if (teachers.length === 0) return showMessage('کاربری یافت نشد.', true);
+
+                const teacher = teachers[0];
+                if (teacher.password !== pass) return showMessage('رمز عبور اشتباه است.', true);
+                if (!teacher.active) return showMessage('حساب شما غیرفعال شده است. با مدیر تماس بگیرید.', true);
+
+                currentTeacher = teacher;
+
+                // دریافت تمام تخصیص‌های این دبیر
+                const { data: assignments, error: err2 } = await supabaseClient.from('teacher_assignments').select('*').eq('teacher_id', currentTeacher.id);
+                if (err2) throw new Error(err2.message);
+                if (!assignments || assignments.length === 0) return showMessage('هیچ کلاس/درسی برای شما تخصیص داده نشده است.', true);
+
+                teacherAssignments = assignments; // ذخیره در حافظه
+
+                document.getElementById('loginBox').classList.add('hidden');
+                document.getElementById('teacherPanel').classList.remove('hidden');
+                document.getElementById('logoutBtn').classList.remove('hidden');
+                document.getElementById('welcomeText').textContent = 'خوش آمدید، ' + currentTeacher.full_name;
+
+                // پر کردن لیست کلاس‌ها (بدون تکرار)
+                const classes = [...new Set(assignments.map(a => a.class_name))];
+                document.getElementById('selectClass').innerHTML = classes.map(c => `<option value="${c}">${c}</option>`).join('');
+                
+                // آپدیت لیست درس‌ها بر اساس کلاس اول
+                updateSubjects();
+
+            } catch (err) {
+                showMessage(err.message, true);
+            }
+        }
+
+        function logout() {
+            currentTeacher = null;
+            teacherAssignments = [];
+            document.getElementById('loginBox').classList.remove('hidden');
+            document.getElementById('teacherPanel').classList.add('hidden');
+            document.getElementById('logoutBtn').classList.add('hidden');
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('studentsTableContainer').innerHTML = '<p style="color:#666;">ابتدا کلاس، درس و ماه را انتخاب کنید.</p>';
+        }
+
+        // آپدیت لیست درس‌ها بر اساس کلاس انتخاب‌شده
+        function updateSubjects() {
+            const selectedClass = document.getElementById('selectClass').value;
+            // فیلتر کردن تخصیص‌ها برای کلاس انتخاب‌شده
+            const subjectsForClass = teacherAssignments
+                .filter(a => a.class_name === selectedClass)
+                .map(a => a.subject_name);
+            
+            // حذف تکراری‌ها (در صورتی که یک درس دو بار تخصیص داده شده باشد)
+            const uniqueSubjects = [...new Set(subjectsForClass)];
+
+            document.getElementById('selectSubject').innerHTML = uniqueSubjects.map(s => `<option value="${s}">${s}</option>`).join('');
+            
+            // بعد از آپدیت درس‌ها، لیست دانش‌آموزان و نمرات را بارگذاری کن
+            loadStudentsAndGrades();
+        }
+
+        async function loadStudentsAndGrades() {
+            const cls = document.getElementById('selectClass').value;
+            const subject = document.getElementById('selectSubject').value;
+            const month = document.getElementById('selectMonth').value;
+            
+            if (!cls || !subject || !month) return;
+
+            const container = document.getElementById('studentsTableContainer');
+            container.innerHTML = '<p>در حال بارگذاری...</p>';
+
+            try {
+                const [studentsRes, gradesRes] = await Promise.all([
+                    supabaseClient.from('students').select('*').eq('class_name', cls).order('last_name', { ascending: true }),
+                    supabaseClient.from('grades').select('*').eq('class_name', cls).eq('subject_name', subject).eq('month', month)
+                ]);
+
+                if (studentsRes.error) throw new Error(studentsRes.error.message);
+                if (gradesRes.error) throw new Error(gradesRes.error.message);
+
+                const students = studentsRes.data;
+                const existingGrades = gradesRes.data;
+
+                if (students.length === 0) {
+                    container.innerHTML = '<p style="color:red;">هیچ دانش‌آموزی در این کلاس وجود ندارد.</p>';
+                    return;
+                }
+
+                const gradesMap = {};
+                existingGrades.forEach(g => { gradesMap[g.student_id] = g.score; });
+
+                let html = `<table><thead><tr><th>ردیف</th><th>نام و نام خانوادگی</th><th>نمره (از ۲۰)</th></tr></thead><tbody>`;
+                students.forEach((s, i) => {
+                    const previousScore = gradesMap[s.id] !== undefined ? gradesMap[s.id] : '';
+                    html += `<tr>
+                        <td>${i+1}</td>
+                        <td>${s.first_name} ${s.last_name}</td>
+                        <td><input type="number" class="score-input" data-id="${s.id}" min="0" max="20" step="0.25" value="${previousScore}" placeholder="—"></td>
+                    </tr>`;
+                });
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+
+            } catch (err) {
+                container.innerHTML = `<p style="color:red;">خطا: ${err.message}</p>`;
+            }
+        }
+
+        async function saveGrades() {
+            if (!currentTeacher) return showMessage('خطا: دبیر شناسایی نشد.', true);
+            
+            const cls = document.getElementById('selectClass').value;
+            const subject = document.getElementById('selectSubject').value;
+            const month = document.getElementById('selectMonth').value;
+
+            if (!cls || !subject || !month) return showMessage('لطفاً کلاس، درس و ماه را انتخاب کنید.', true);
+
+            const inputs = document.querySelectorAll('.score-input');
+            let gradesToSave = [];
+
+            inputs.forEach(input => {
+                const score = parseFloat(input.value);
+                if (!isNaN(score) && score >= 0 && score <= 20) {
+                    gradesToSave.push({
+                        student_id: input.dataset.id,
+                        class_name: cls,
+                        subject_name: subject,
+                        month: month,
+                        score: score,
+                        teacher_id: currentTeacher.id
+                    });
+                }
+            });
+
+            if (gradesToSave.length === 0) return showMessage('هیچ نمره معتبری وارد نشده است.', true);
+
+            showMessage('در حال ذخیره در سرور...', false);
+
+            try {
+                const promises = gradesToSave.map(grade => {
+                    return fetch(`${SUPABASE_URL}/rest/v1/grades?on_conflict=student_id,subject_name,month`, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_KEY}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'resolution=merge-duplicates' 
+                        },
+                        body: JSON.stringify(grade)
+                    });
+                });
+
+                const responses = await Promise.all(promises);
+                const errorCount = responses.filter(r => !r.ok).length;
+                const successCount = responses.length - errorCount;
+
+                if (errorCount > 0) {
+                    showMessage(`${successCount} نمره ذخیره شد. ${errorCount} نمره خطا داد.`, true);
+                } else {
+                    showMessage(`تغییرات با موفقیت ذخیره شد. (${successCount} نمره)`, false);
+                    await loadStudentsAndGrades();
+                }
+
+            } catch (err) {
+                showMessage('خطای شبکه: ' + err.message, true);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1236 @@
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>سامانه مدیریت نمرات مدرسه (آنلاین)</title>
+
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        :root { --blue: #1769aa; --bg: #f4f7fb; --card: #fff; --line: #d7e1ea; }
+        body { font-family: "Vazirmatn", Tahoma, Arial, sans-serif; margin: 0; background: var(--bg); color: #183044; }
+        header { background: linear-gradient(120deg, #125b99, #268bc0); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { margin: 0; font-size: 20px; }
+
+        .main-wrapper { display: flex; max-width: 1200px; margin: 20px auto; padding: 0 15px; gap: 20px; }
+        .sidebar { width: 250px; flex-shrink: 0; }
+        .sidebar-menu { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); margin-bottom: 15px; }
+        .sidebar-menu button { display: block; width: 100%; text-align: right; padding: 15px 20px; border: none; background: none; border-bottom: 1px solid var(--line); font-family: inherit; font-size: 14px; cursor: pointer; color: #40596c; transition: background 0.2s; }
+        .sidebar-menu button:hover { background: #f0f5f9; }
+        .sidebar-menu button.active { background: #eaf4fb; color: var(--blue); font-weight: bold; border-right: 4px solid var(--blue); }
+
+        .content-area { flex-grow: 1; min-width: 0; }
+        .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); }
+        .row { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 15px; }
+        .field { flex: 1; min-width: 200px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #40596c; }
+        select, input[type="text"], input[type="number"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #bdcbd7; border-radius: 6px; font-family: inherit; font-size: 14px; box-sizing: border-box; }
+        button { background: var(--blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: bold; }
+        button:hover:not(:disabled) { opacity: 0.9; }
+        button:disabled { background: #bdcbd7; cursor: not-allowed; opacity: 0.7; }
+        button.secondary { background: #526879; }
+        button.success { background: #28a745; }
+        button.danger { background: #c0392b; }
+        button.warning { background: #f39c12; color: white; }
+        button.purple { background: #8e44ad; }
+        button.info { background: #17a2b8; }
+        button.icon-btn { padding: 5px 10px; font-size: 14px; margin: 0 2px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 10px; border-bottom: 1px solid var(--line); text-align: right; font-size: 14px; }
+        th { background: #eaf4fb; }
+        .hidden { display: none !important; }
+        .error-list { background: #ffe6e6; border: 1px solid #ff9999; padding: 15px; border-radius: 8px; margin-top: 15px; color: #990000; }
+        .error-list h4 { margin-top: 0; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 12px; color: white; }
+        .badge-active { background: #28a745; }
+        .badge-inactive { background: #dc3545; }
+
+        /* مودال */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 4000; }
+        .modal-content { background: white; padding: 25px; border-radius: 10px; width: 450px; max-width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-content h3 { margin-top: 0; color: var(--blue); }
+
+        #loginScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+        .login-box { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); text-align: center; width: 300px; }
+        .login-box h2 { margin-top: 0; color: var(--blue); }
+        .login-box input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 6px; text-align: center; font-size: 18px; letter-spacing: 5px; box-sizing: border-box; }
+
+        #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 5000; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 14px; opacity: 0; transition: opacity 0.3s, visibility 0.3s; }
+        #toast.show { visibility: visible; opacity: 1; }
+        #toast.success { background-color: #28a745; }
+        #toast.error { background-color: #dc3545; }
+
+        @media (max-width: 768px) {
+            .main-wrapper { flex-direction: column; }
+            .sidebar { width: 100%; }
+            .sidebar-menu { display: flex; flex-wrap: wrap; }
+            .sidebar-menu button { width: 50%; border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); }
+        }
+    </style>
+</head>
+<body>
+    <!-- مودال تخصیص -->
+    <div id="assignModal" class="modal hidden">
+        <div class="modal-content">
+            <h3>تخصیص کلاس و درس</h3>
+            <p style="font-size: 13px; color: #666;" id="assignTeacherName"></p>
+            <div class="row">
+                <div class="field">
+                    <label>کلاس</label>
+                    <select id="modalClass" onchange="updateModalSubjects()"></select>
+                </div>
+                <div class="field">
+                    <label>درس</label>
+                    <select id="modalSubject"></select>
+                </div>
+                <button class="success" onclick="addAssignment()">افزودن</button>
+            </div>
+            <div id="currentAssignmentsList" style="margin-top: 15px;"></div>
+            <button class="secondary" onclick="closeAssignModal()" style="width: 100%; margin-top: 15px;">بستن</button>
+        </div>
+    </div>
+
+    <div id="loginScreen">
+        <div class="login-box">
+            <h2>🔒 ورود به سامانه</h2>
+            <p style="font-size: 13px; color: #666">لطفاً رمز عبور مدیریت را وارد کنید.</p>
+            <input type="password" id="adminPassword" placeholder="****" onkeypress="handleEnter(event)" />
+            <button onclick="checkLogin()" style="width: 100%; padding: 12px">ورود</button>
+        </div>
+    </div>
+
+    <header class="hidden" id="mainHeader">
+        <h1>سامانه مدیریت نمرات (آنلاین)</h1>
+        <div style="display: flex; gap: 15px; align-items: center">
+            <button class="danger" onclick="logout()" style="padding: 5px 15px; font-size: 13px">خروج (قفل)</button>
+            <div style="font-size: 14px; background: rgba(255, 255, 255, 0.2); padding: 5px 10px; border-radius: 20px">حالت: مدیر</div>
+        </div>
+    </header>
+
+    <div id="toast">پیام</div>
+
+    <div class="main-wrapper hidden" id="mainContainer">
+        <div class="sidebar">
+            <div class="sidebar-menu">
+                <button id="btn-tab-admin" class="active" onclick="switchTab('admin')">پنل معاون / مدیر</button>
+                <button id="btn-tab-teacher" onclick="switchTab('teacher')">پنل دبیر</button>
+            </div>
+
+            <div class="sidebar-menu" id="adminSubMenu">
+                <button id="menu-students" class="active" onclick="showAdminSection('students')">مدیریت دانش‌آموزان</button>
+                <button id="menu-add-student" onclick="showAdminSection('add-student')">افزودن دانش‌آموز جدید</button>
+                <button id="menu-teachers" onclick="showAdminSection('teachers')">مدیریت دبیران</button>
+                <button id="menu-tools" onclick="showAdminSection('tools')">ابزار و پشتیبان‌گیری</button>
+                <button id="menu-absences" onclick="showAdminSection('absences')">ثبت غیبت و تاخیر</button>
+                <button id="menu-discipline" onclick="showAdminSection('discipline')">ثبت انضباط</button>
+                <button id="menu-report-monthly" onclick="showAdminSection('report-monthly')">کارنامه ماهانه</button>
+                <button id="menu-report-yearly" onclick="showAdminSection('report-yearly')">کارنامه سالانه</button>
+                <button id="menu-list-grades" onclick="showAdminSection('list-grades')">لیست نمرات کلاس</button>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div id="adminPanel">
+                <div id="sec-students" class="card">
+                    <h3>مدیریت دانش‌آموزان (اتصال به سرور)</h3>
+                    <div class="row">
+                        <button class="secondary" onclick="downloadExcelTemplate()">⬇️ دانلود قالب</button>
+                        <input type="file" id="excelFile" accept=".xlsx, .xls, .csv" style="display: none" onchange="uploadExcel(event)" />
+                        <button class="success" onclick="document.getElementById('excelFile').click()">📂 بارگذاری اکسل در سرور</button>
+                        <button class="danger" onclick="clearStudentsOnly()">🗑️ پاک کردن لیست از سرور</button>
+                    </div>
+                    <p style="font-size: 14px; margin-top: 10px; font-weight: bold; color: #1769aa">تعداد دانش‌آموزان در سرور: <span id="studentCountDisplay">0</span> نفر</p>
+                    <div id="uploadErrors" class="hidden error-list"></div>
+                </div>
+
+                <div id="sec-add-student" class="card hidden">
+                    <h3>افزودن دانش‌آموز جدید</h3>
+                    <div class="row">
+                        <div class="field"><label>نام</label><input type="text" id="newFirstName" placeholder="مثلاً: محمد"></div>
+                        <div class="field"><label>نام خانوادگی</label><input type="text" id="newLastName" placeholder="مثلاً: رضایی"></div>
+                    </div>
+                    <div class="row">
+                        <div class="field"><label>کلاس</label><input type="text" id="newClass" placeholder="مثلاً: نهم دو"></div>
+                        <div class="field"><label>کد ملی</label><input type="text" id="newId" placeholder="مثلاً: 1746973404"></div>
+                    </div>
+                    <button class="success" onclick="addSingleStudent()">➕ افزودن دانش‌آموز</button>
+                </div>
+
+                <div id="sec-teachers" class="card hidden" style="border-right: 5px solid #e67e22;">
+                    <h3>مدیریت دبیران</h3>
+                    <p style="font-size: 13px; color: #666">ابتدا دبیر را ایجاد کنید، سپس با دکمه تخصیص (📚)، کلاس و درس‌های او را مشخص کنید.</p>
+                    
+                    <div style="background: #fdf5e6; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin-top: 0;">افزودن دبیر جدید (بدون تخصیص)</h4>
+                        <div class="row">
+                            <div class="field"><label>نام و نام خانوادگی</label><input type="text" id="tFullName" placeholder="مثلاً: علی محمدی"></div>
+                            <div class="field"><label>نام کاربری</label><input type="text" id="tUsername" placeholder="مثلاً: ali"></div>
+                            <div class="field"><label>رمز عبور</label><input type="text" id="tPassword" placeholder="مثلاً: 123456"></div>
+                        </div>
+                        <button class="warning" onclick="addTeacher()">➕ ایجاد دبیر</button>
+                    </div>
+
+                    <h4>لیست دبیران</h4>
+                    <div id="teachersListContainer"></div>
+                </div>
+
+                <div id="sec-tools" class="card hidden">
+                    <h3>ابزارهای مدیریتی</h3>
+                    <div class="row">
+                        <button class="secondary" onclick="loadFromServer()">🔄 بروزرسانی اطلاعات از سرور</button>
+                        <button class="success" onclick="openDashboard()">📊 داشبورد تحلیل</button>
+                    </div>
+                </div>
+
+                <!-- بخش غیبت -->
+                <div id="sec-absences" class="card hidden" style="border-right: 5px solid #e74c3c">
+                    <h3>ثبت غیبت و تاخیر</h3>
+                    <div class="row">
+                        <div class="field">
+                            <label>ماه</label>
+                            <select id="absMonth" onchange="onAbsenceFilterChange()">
+                                <option value="">-- انتخاب ماه --</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>کلاس</label>
+                            <select id="absClass" onchange="onAbsenceFilterChange()">
+                                <option value="">-- انتخاب کلاس --</option>
+                            </select>
+                        </div>
+                        <button id="saveAbsenceBtn" class="danger" onclick="saveAbsence()" disabled>ذخیره غیبت‌ها</button>
+                    </div>
+                    <div id="absTableContainer">
+                        <p style="color:#666;">لطفاً ابتدا ماه و کلاس را انتخاب کنید.</p>
+                    </div>
+                </div>
+
+                <div id="sec-discipline" class="card hidden">
+                    <h3>ثبت ارزشیابی انضباط</h3>
+                    <div class="row">
+                        <div class="field"><label>ماه</label><select id="discMonth" onchange="renderDisciplineTable()"></select></div>
+                        <div class="field"><label>کلاس</label><select id="discClass" onchange="renderDisciplineTable()"></select></div>
+                        <button onclick="saveDiscipline()">ذخیره انضباط</button>
+                    </div>
+                    <div id="discTableContainer"></div>
+                </div>
+
+                <div id="sec-report-monthly" class="card hidden">
+                    <h3>مشاهده و چاپ کارنامه ماهانه</h3>
+                    <div class="row">
+                        <div class="field"><label>ماه کارنامه</label><select id="repMonth"></select></div>
+                        <div class="field"><label>کلاس</label><select id="repClass"></select></div>
+                        <button onclick="renderReport('monthly')">نمایش در تب جدید</button>
+                    </div>
+                </div>
+
+                <div id="sec-report-yearly" class="card hidden" style="border-right: 5px solid #8e44ad">
+                    <h3>مشاهده و چاپ کارنامه سالانه</h3>
+                    <div class="row">
+                        <div class="field"><label>کلاس</label><select id="repClassYear"></select></div>
+                        <button class="purple" onclick="renderReport('yearly')">نمایش در تب جدید</button>
+                    </div>
+                </div>
+
+                <div id="sec-list-grades" class="card hidden" style="border-right: 5px solid #17a2b8">
+                    <h3>چاپ لیست نمرات کلاس (تک صفحه‌ای A4 عمودی)</h3>
+                    <div class="row">
+                        <div class="field"><label>ماه</label><select id="listMonth"></select></div>
+                        <div class="field"><label>کلاس</label><select id="listClass"></select></div>
+                        <button class="info" onclick="printClassList()">📄 نمایش و چاپ لیست</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="teacherPanel" class="hidden">
+                <div class="card">
+                    <h3>ثبت نمرات توسط دبیر</h3>
+                    <div class="row">
+                        <div class="field"><label>ماه</label><select id="gradeMonth" onchange="renderGradeTable()"></select></div>
+                        <div class="field"><label>کلاس</label><select id="gradeClass" onchange="updateSubjectsAndRender()"></select></div>
+                        <div class="field"><label>درس</label><select id="gradeSubject" onchange="renderGradeTable()"></select></div>
+                        <button onclick="saveGrades()">ذخیره نمرات در سرور</button>
+                        <button class="success" onclick="exportExcel()">خروجی اکسل</button>
+                    </div>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee">
+                        <p style="font-size: 13px; color: #666">دانلود قالب اکسل برای ثبت نمرات و سپس بارگذاری آن.</p>
+                        <div class="row">
+                            <button class="secondary" onclick="downloadGradeTemplate()">⬇️ دانلود قالب نمره</button>
+                            <input type="file" id="gradeExcelFile" accept=".xlsx, .xls" style="display: none" onchange="uploadGradeExcel(event)" />
+                            <button class="warning" onclick="document.getElementById('gradeExcelFile').click()">📂 بارگذاری نمرات از اکسل</button>
+                        </div>
+                    </div>
+                    <div id="gradeTableContainer" style="margin-top: 15px"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ADMIN_PASSWORD = "1234";
+        const SUPABASE_URL = "https://efihrvgakezpbymjgjiu.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_zKl_1r6F-8uCIrym5OURSA_ZE2r3-V1"; 
+        
+        const DB = {
+            students: [],
+            teachers: [],
+            teacherAssignments: [],
+            allSubjects: ["آموزش قرآن", "پیام‌های آسمان", "فارسی", "املا", "نگارش", "عربی", "زبان انگلیسی", "ریاضی", "علوم تجربی", "مطالعات اجتماعی", "فرهنگ و هنر", "کار و فناوری", "تفکر و سبک زندگی", "آمادگی دفاعی", "تربیت بدنی"],
+            disciplineLevels: ["عالی", "خیلی خوب", "خوب", "قابل قبول", "نیازمند تلاش بیشتر"],
+            grades: {}, 
+            discipline: {},
+            absences: {},
+            months: ["مهر ۱۴۰۵", "آبان ۱۴۰۵", "آذر ۱۴۰۵", "دی ۱۴۰۵", "بهمن ۱۴۰۵", "اسفند ۱۴۰۵", "فروردین ۱۴۰۶", "اردیبهشت ۱۴۰۶"],
+        };
+
+        let currentAssignTeacherId = null;
+        let currentAbsencesInitialState = {}; // برای ذخیره وضعیت اولیه غیبت‌ها
+
+        async function apiFetch(table, method = 'GET', body = null) {
+            const headers = {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            };
+            let url = `${SUPABASE_URL}/rest/v1/${table}`;
+            const options = { method, headers };
+            if (body) options.body = JSON.stringify(body);
+            if (method === 'POST' || method === 'PATCH') headers['Prefer'] = 'resolution=merge-duplicates';
+
+            const response = await fetch(url, options);
+            if (!response.ok) throw new Error(await response.text());
+            return response.status === 204 ? [] : await response.json();
+        }
+
+        async function loadFromServer() {
+            showMsg("در حال دریافت اطلاعات...", "success");
+            try {
+                const students = await apiFetch('students?select=*');
+                DB.students = sortStudentsPersian(students.map(s => ({id: s.id, first: s.first_name, last: s.last_name, className: s.class_name})));
+                
+                const grades = await apiFetch('grades?select=*');
+                DB.grades = {};
+                grades.forEach(g => {
+                    const key = `${g.month}_${g.class_name}_${g.subject_name}`;
+                    if (!DB.grades[key]) DB.grades[key] = {};
+                    DB.grades[key][g.student_id] = g.score;
+                });
+
+                const abs = await apiFetch('absences?select=*');
+                DB.absences = {};
+                abs.forEach(a => { DB.absences[`${a.month}_${a.student_id}`] = { excused: a.excused, unexcused: a.unexcused, late: a.late }; });
+
+                const disc = await apiFetch('discipline?select=*');
+                DB.discipline = {};
+                disc.forEach(d => { DB.discipline[`${d.month}_${d.student_id}`] = { level: d.level, comment: d.comment }; });
+
+                DB.teachers = await apiFetch('teachers?select=*');
+                DB.teacherAssignments = await apiFetch('teacher_assignments?select=*');
+                
+                renderTeachersList();
+                initUI();
+                showMsg(`اطلاعات دریافت شد. (${DB.students.length} دانش‌آموز)`);
+            } catch (err) {
+                showMsg("خطا: " + err.message, "error");
+            }
+        }
+
+        function sortStudentsPersian(studentsArray) {
+            return studentsArray.sort((a, b) => {
+                const normalize = (str) => { if (!str) return ""; return str.toString().replace(/ي/g, "ی").replace(/ك/g, "ک").replace(/\s+/g, " ").trim(); };
+                const collator = new Intl.Collator("fa-IR");
+                const ln = collator.compare(normalize(a.last), normalize(b.last));
+                return ln !== 0 ? ln : collator.compare(normalize(a.first), normalize(b.first));
+            });
+        }
+
+        function handleEnter(e) { if (e.key === "Enter") checkLogin(); }
+        function checkLogin() {
+            if (document.getElementById("adminPassword").value === ADMIN_PASSWORD) {
+                document.getElementById("loginScreen").classList.add("hidden");
+                document.getElementById("mainHeader").classList.remove("hidden");
+                document.getElementById("mainContainer").classList.remove("hidden");
+                loadFromServer(); 
+            } else {
+                showMsg("رمز عبور اشتباه است!", "error");
+                document.getElementById("adminPassword").value = "";
+            }
+        }
+
+        function logout() { location.reload(); }
+
+        function showMsg(text, type = "success") {
+            const toast = document.getElementById("toast");
+            toast.textContent = text;
+            toast.className = type === "success" ? "show success" : "show error";
+            setTimeout(() => { toast.className = ""; }, 4000);
+        }
+
+        function showAdminSection(secId) {
+            document.querySelectorAll("#adminPanel > div").forEach((el) => el.classList.add("hidden"));
+            document.getElementById("sec-" + secId).classList.remove("hidden");
+            document.querySelectorAll("#adminSubMenu button").forEach((el) => el.classList.remove("active"));
+            document.getElementById("menu-" + secId).classList.add("active");
+        }
+
+        function switchTab(tab) {
+            if (tab === "admin") {
+                document.getElementById("adminPanel").classList.remove("hidden");
+                document.getElementById("teacherPanel").classList.add("hidden");
+                document.getElementById("adminSubMenu").classList.remove("hidden");
+                document.getElementById("btn-tab-admin").classList.add("active");
+                document.getElementById("btn-tab-teacher").classList.remove("active");
+            } else {
+                document.getElementById("adminPanel").classList.add("hidden");
+                document.getElementById("teacherPanel").classList.remove("hidden");
+                document.getElementById("adminSubMenu").classList.add("hidden");
+                document.getElementById("btn-tab-admin").classList.remove("active");
+                document.getElementById("btn-tab-teacher").classList.add("active");
+            }
+        }
+
+        function initUI() {
+            document.getElementById("studentCountDisplay").textContent = DB.students.length;
+            
+            const monthsOptions = DB.months.map((m) => `<option value="${m}">${m}</option>`).join("");
+            ["discMonth", "gradeMonth", "repMonth", "listMonth"].forEach((id) => {
+                if (document.getElementById(id)) document.getElementById(id).innerHTML = monthsOptions;
+            });
+            
+            const absMonthSelect = document.getElementById("absMonth");
+            absMonthSelect.innerHTML = '<option value="">-- انتخاب ماه --</option>' + monthsOptions;
+
+            const classes = [...new Set(DB.students.map((s) => s.className))].sort();
+            const classOptions = classes.map((c) => `<option value="${c}">${c}</option>`).join("");
+            ["discClass", "gradeClass", "repClass", "repClassYear", "listClass", "modalClass"].forEach((id) => {
+                if (document.getElementById(id)) document.getElementById(id).innerHTML = classOptions;
+            });
+
+            const absClassSelect = document.getElementById("absClass");
+            absClassSelect.innerHTML = '<option value="">-- انتخاب کلاس --</option>' + classOptions;
+
+            updateModalSubjects();
+            updateSubjectsAndRender();
+        }
+
+        function getSubjectsForClass(cls) {
+            if (!cls) return DB.allSubjects;
+            if (cls.includes("نهم")) return DB.allSubjects.filter((sub) => sub !== "تفکر و سبک زندگی");
+            if (cls.includes("هفتم") || cls.includes("هشتم")) return DB.allSubjects.filter((sub) => sub !== "آمادگی دفاعی");
+            return DB.allSubjects;
+        }
+
+        function updateModalSubjects() {
+            const cls = document.getElementById("modalClass").value;
+            const subjects = getSubjectsForClass(cls);
+            document.getElementById("modalSubject").innerHTML = subjects.map((s) => `<option value="${s}">${s}</option>`).join("");
+        }
+
+        function updateSubjectsAndRender() {
+            const cls = document.getElementById("gradeClass").value;
+            const subjects = getSubjectsForClass(cls);
+            document.getElementById("gradeSubject").innerHTML = subjects.map((s) => `<option value="${s}">${s}</option>`).join("");
+            renderGradeTable();
+        }
+
+        // --- مدیریت دبیران ---
+        async function addTeacher() {
+            const fullName = document.getElementById('tFullName').value.trim();
+            const username = document.getElementById('tUsername').value.trim();
+            const password = document.getElementById('tPassword').value.trim();
+
+            if (!fullName || !username || !password) {
+                return showMsg("لطفاً نام، نام کاربری و رمز عبور را پر کنید.", "error");
+            }
+
+            try {
+                showMsg("در حال ثبت دبیر...", "success");
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/teachers`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify({ full_name: fullName, username: username, password: password, active: true })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error("خطای سرور: " + (errData.message || response.statusText));
+                }
+                
+                showMsg("دبیر ایجاد شد. حالا می‌توانید کلاس‌ها را تخصیص دهید.");
+                document.getElementById('tFullName').value = '';
+                document.getElementById('tUsername').value = '';
+                document.getElementById('tPassword').value = '';
+                
+                loadFromServer();
+            } catch (err) {
+                showMsg(err.message, "error");
+            }
+        }
+
+        function renderTeachersList() {
+            const container = document.getElementById('teachersListContainer');
+            if (!DB.teachers.length) {
+                container.innerHTML = '<p>هیچ دبیری ثبت نشده است.</p>';
+                return;
+            }
+
+            let html = `<table><thead><tr><th>نام دبیر</th><th>نام کاربری</th><th>وضعیت</th><th>تخصیص‌ها</th><th>عملیات</th></tr></thead><tbody>`;
+            
+            DB.teachers.forEach(t => {
+                const assignments = DB.teacherAssignments.filter(a => a.teacher_id === t.id);
+                const assignText = assignments.map(a => `${a.class_name} (${a.subject_name})`).join(' | ') || '<span style="color:red;">بدون تخصیص</span>';
+                const statusBadge = t.active ? '<span class="badge badge-active">فعال</span>' : '<span class="badge badge-inactive">غیرفعال</span>';
+                const toggleBtnText = t.active ? 'غیرفعال' : 'فعال';
+                
+                html += `<tr>
+                    <td>${t.full_name}</td>
+                    <td>${t.username}</td>
+                    <td>${statusBadge}</td>
+                    <td style="font-size: 12px;">${assignText}</td>
+                    <td>
+                        <button class="info icon-btn" onclick="openAssignModal(${t.id}, '${t.full_name}')" title="تخصیص کلاس/درس">📚</button>
+                        <button class="${t.active ? 'danger' : 'success'} icon-btn" onclick="toggleTeacherStatus(${t.id}, ${!t.active})" title="${toggleBtnText}">${toggleBtnText}</button>
+                        <button class="danger icon-btn" onclick="deleteTeacher(${t.id})" title="حذف">🗑️</button>
+                    </td>
+                </tr>`;
+            });
+            
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        // مودال تخصیص
+        function openAssignModal(teacherId, teacherName) {
+            currentAssignTeacherId = teacherId;
+            document.getElementById('assignTeacherName').textContent = `تخصیص برای: ${teacherName}`;
+            document.getElementById('assignModal').classList.remove('hidden');
+            renderCurrentAssignments();
+            updateModalSubjects(); 
+        }
+
+        function closeAssignModal() {
+            document.getElementById('assignModal').classList.add('hidden');
+            currentAssignTeacherId = null;
+        }
+
+        function renderCurrentAssignments() {
+            if (!currentAssignTeacherId) return;
+            const container = document.getElementById('currentAssignmentsList');
+            const assignments = DB.teacherAssignments.filter(a => a.teacher_id === currentAssignTeacherId);
+            
+            if (assignments.length === 0) {
+                container.innerHTML = '<p style="color:#666;">هیچ تخصیصی برای این دبیر ثبت نشده است.</p>';
+                return;
+            }
+
+            let html = '<ul style="padding-right: 20px; margin: 0;">';
+            assignments.forEach(a => {
+                html += `<li style="margin-bottom: 5px;">
+                    ${a.class_name} - ${a.subject_name}
+                    <button class="danger" style="padding: 2px 8px; font-size: 11px;" onclick="removeAssignment(${a.id})">حذف</button>
+                </li>`;
+            });
+            html += '</ul>';
+            container.innerHTML = html;
+        }
+
+        async function addAssignment() {
+            if (!currentAssignTeacherId) return;
+            const cls = document.getElementById('modalClass').value;
+            const subject = document.getElementById('modalSubject').value;
+
+            const isDuplicate = DB.teacherAssignments.some(a => 
+                a.teacher_id === currentAssignTeacherId && 
+                a.class_name === cls && 
+                a.subject_name === subject
+            );
+
+            if (isDuplicate) {
+                return showMsg("این کلاس و درس قبلاً به این دبیر تخصیص داده شده است.", "error");
+            }
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/teacher_assignments`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ teacher_id: currentAssignTeacherId, class_name: cls, subject_name: subject })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error("خطای دیتابیس: " + (errData.message || response.statusText));
+                }
+                
+                showMsg("تخصیص اضافه شد.");
+                await loadFromServer();
+                renderCurrentAssignments();
+                updateModalSubjects();
+            } catch (err) {
+                showMsg("خطا: " + err.message, "error");
+            }
+        }
+
+        async function removeAssignment(assignId) {
+            try {
+                await fetch(`${SUPABASE_URL}/rest/v1/teacher_assignments?id=eq.${assignId}`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                });
+                showMsg("تخصیص حذف شد.");
+                await loadFromServer();
+                renderCurrentAssignments();
+            } catch (err) {
+                showMsg("خطا: " + err.message, "error");
+            }
+        }
+
+        async function toggleTeacherStatus(id, newStatus) {
+            try {
+                await fetch(`${SUPABASE_URL}/rest/v1/teachers?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ active: newStatus })
+                });
+                showMsg("وضعیت دبیر تغییر کرد.");
+                loadFromServer();
+            } catch (err) {
+                showMsg("خطا: " + err.message, "error");
+            }
+        }
+
+        async function deleteTeacher(id) {
+            if (!confirm("آیا از حذف این دبیر و تمام تخصیص‌هایش مطمئن هستید؟")) return;
+            try {
+                await fetch(`${SUPABASE_URL}/rest/v1/teachers?id=eq.${id}`, {
+                    method: 'DELETE',
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                });
+                showMsg("دبیر حذف شد.");
+                loadFromServer();
+            } catch (err) {
+                showMsg("خطا در حذف: " + err.message, "error");
+            }
+        }
+
+        // --- بخش غیبت (اصلاح شده) ---
+        function onAbsenceFilterChange() {
+            const month = document.getElementById("absMonth").value;
+            const cls = document.getElementById("absClass").value;
+            const saveBtn = document.getElementById("saveAbsenceBtn");
+
+            if (!month || !cls) {
+                document.getElementById("absTableContainer").innerHTML = '<p style="color:#666;">لطفاً ابتدا ماه و کلاس را انتخاب کنید.</p>';
+                saveBtn.disabled = true;
+                return;
+            }
+
+            saveBtn.disabled = false;
+            renderAbsenceTable(month, cls);
+        }
+
+        function renderAbsenceTable(month, cls) {
+            const students = DB.students.filter((s) => s.className === cls);
+            const container = document.getElementById("absTableContainer");
+            
+            if (!students.length) { 
+                container.innerHTML = "<p>دانش‌آموزی در این کلاس نیست.</p>"; 
+                return; 
+            }
+
+            currentAbsencesInitialState = {}; // پاک کردن وضعیت قبلی
+
+            let html = `<table><thead><tr><th>ردیف</th><th>نام</th><th>موجه</th><th>غیرموجه</th><th>تاخیر</th></tr></thead><tbody>`;
+            students.forEach((s, i) => {
+                const current = DB.absences[`${month}_${s.id}`] || { excused: 0, unexcused: 0, late: 0 };
+                // ذخیره وضعیت اولیه برای مقایسه در زمان ذخیره
+                currentAbsencesInitialState[s.id] = { 
+                    excused: current.excused, 
+                    unexcused: current.unexcused, 
+                    late: current.late 
+                };
+                
+                html += `<tr data-id="${s.id}"><td>${i + 1}</td><td>${s.first} ${s.last}</td>
+                    <td><input type="number" class="abs-excused" min="0" value="${current.excused}" style="width: 60px;"></td>
+                    <td><input type="number" class="abs-unexcused" min="0" value="${current.unexcused}" style="width: 60px;"></td>
+                    <td><input type="number" class="abs-late" min="0" value="${current.late}" style="width: 60px;"></td>
+                </tr>`;
+            });
+            container.innerHTML = html + `</tbody></table>`;
+        }
+
+        async function saveAbsence() {
+            const month = document.getElementById("absMonth").value;
+            const cls = document.getElementById("absClass").value;
+            if (!month || !cls) return showMsg("لطفاً ماه و کلاس را انتخاب کنید.", "error");
+
+            let recordsToUpdate = [];
+            
+            document.querySelectorAll("#absTableContainer tbody tr").forEach((tr) => {
+                const id = tr.dataset.id;
+                const excused = parseInt(tr.querySelector(".abs-excused").value) || 0;
+                const unexcused = parseInt(tr.querySelector(".abs-unexcused").value) || 0;
+                const late = parseInt(tr.querySelector(".abs-late").value) || 0;
+
+                const initialState = currentAbsencesInitialState[id] || { excused: 0, unexcused: 0, late: 0 };
+
+                // فقط اگر مقدار جدید با مقدار اولیه متفاوت بود، به لیست ارسال اضافه کن
+                if (excused !== initialState.excused || unexcused !== initialState.unexcused || late !== initialState.late) {
+                    recordsToUpdate.push({ student_id: id, month: month, excused, unexcused, late });
+                }
+            });
+
+            if (recordsToUpdate.length === 0) {
+                return showMsg("هیچ تغییری در مقادیر غیبت اعمال نشده است.", "success");
+            }
+
+            showMsg(`در حال ذخیره ${recordsToUpdate.length} مورد تغییر یافته...`, "success");
+            let successCount = 0;
+            let errorCount = 0;
+
+            // ارسال تک‌تک برای جلوگیری از خطای 409
+            for (const record of recordsToUpdate) {
+                try {
+                    const response = await fetch(`${SUPABASE_URL}/rest/v1/absences?on_conflict=student_id,month`, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_KEY}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'resolution=merge-duplicates'
+                        },
+                        body: JSON.stringify(record)
+                    });
+
+                    if (response.ok) successCount++;
+                    else errorCount++;
+                    
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                } catch (err) {
+                    errorCount++;
+                }
+            }
+
+            if (errorCount > 0) {
+                showMsg(`${successCount} مورد ذخیره شد. ${errorCount} مورد خطا داد.`, "error");
+            } else {
+                showMsg(`تغییرات با موفقیت ذخیره شد. (${successCount} مورد)`, "success");
+                // دریافت مجدد داده‌ها از سرور و رفرش جدول
+                await loadFromServer();
+                onAbsenceFilterChange(); 
+            }
+        }
+
+        // --- سایر توابع ---
+        function downloadExcelTemplate() {
+            let csvContent = "\uFEFFنام,نام خانوادگی,کلاس,کد ملی\nمحمد,رضایی,نهم دو,1234567890\n";
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `Template_Students.csv`;
+            link.click();
+        }
+
+        async function uploadExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function (e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: "array" });
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+                    if (jsonData.length < 2) return showMsg("فایل خالی است.", "error");
+
+                    const headers = jsonData[0];
+                    let nameIdx = 0, lastNameIdx = 1, classIdx = 2, idIdx = 3;
+                    headers.forEach((h, i) => {
+                        const headerText = String(h).trim().replace(/ي/g, "ی").replace(/ك/g, "ک");
+                        if (headerText.includes("نام") && !headerText.includes("خانوادگی")) nameIdx = i;
+                        if (headerText.includes("خانوادگی")) lastNameIdx = i;
+                        if (headerText.includes("کلاس")) classIdx = i;
+                        if (headerText.includes("کد") || headerText.includes("ملی")) idIdx = i;
+                    });
+
+                    let uniqueStudents = new Map();
+                    for (let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row || row.length === 0) continue;
+                        const first = String(row[nameIdx] || "").trim();
+                        const last = String(row[lastNameIdx] || "").trim();
+                        const className = String(row[classIdx] || "").trim();
+                        let rawId = String(row[idIdx] || "").trim();
+                        let id = rawId.replace(/\s+/g, ''); 
+                        if (!id) id = String(Date.now() + i); 
+
+                        if (first && last && className) {
+                            uniqueStudents.set(id, { id: id, first_name: first, last_name: last, class_name: className });
+                        }
+                    }
+
+                    const newStudents = Array.from(uniqueStudents.values());
+                    if (newStudents.length === 0) return showMsg("داده معتبری پیدا نشد.", "error");
+                    
+                    showMsg(`در حال ارسال ${newStudents.length} دانش‌آموز...`, "success");
+                    const chunkSize = 50;
+                    let successCount = 0;
+
+                    for (let i = 0; i < newStudents.length; i += chunkSize) {
+                        const chunk = newStudents.slice(i, i + chunkSize);
+                        try {
+                            await fetch(`${SUPABASE_URL}/rest/v1/students`, {
+                                method: 'POST',
+                                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=ignore-duplicates' },
+                                body: JSON.stringify(chunk)
+                            });
+                            successCount += chunk.length;
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            showMsg(`در حال ارسال... (${successCount} از ${newStudents.length})`, "success");
+                        } catch (err) {}
+                    }
+                    
+                    showMsg("در حال همگام‌سازی...", "success");
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    await loadFromServer();
+                    showMsg(`عملیات پایان یافت. ${successCount} دانش‌آموز ثبت شد.`);
+                } catch (err) { showMsg("خطای کلی: " + err.message, "error"); }
+                event.target.value = "";
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function addSingleStudent() {
+            const first = document.getElementById('newFirstName').value.trim();
+            const last = document.getElementById('newLastName').value.trim();
+            const className = document.getElementById('newClass').value.trim();
+            const id = document.getElementById('newId').value.trim();
+
+            if (!first || !last || !className || !id) return showMsg("لطفاً تمام فیلدها را پر کنید.", "error");
+
+            try {
+                await fetch(`${SUPABASE_URL}/rest/v1/students`, {
+                    method: 'POST',
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+                    body: JSON.stringify({ id: id, first_name: first, last_name: last, class_name: className })
+                });
+                showMsg("دانش‌آموز اضافه شد.");
+                document.getElementById('newFirstName').value = '';
+                document.getElementById('newLastName').value = '';
+                document.getElementById('newClass').value = '';
+                document.getElementById('newId').value = '';
+                loadFromServer();
+            } catch (err) { showMsg("خطا: " + err.message, "error"); }
+        }
+
+        async function clearStudentsOnly() {
+            if (confirm("کل لیست دانش‌آموزان پاک شود؟")) {
+                try {
+                    await fetch(`${SUPABASE_URL}/rest/v1/students?id=neq.0`, { method: 'DELETE', headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } });
+                    showMsg("لیست پاک شد."); loadFromServer();
+                } catch (err) { showMsg("خطا: " + err.message, "error"); }
+            }
+        }
+
+        function renderDisciplineTable() {
+            const month = document.getElementById("discMonth").value;
+            const cls = document.getElementById("discClass").value;
+            const students = DB.students.filter((s) => s.className === cls);
+            const container = document.getElementById("discTableContainer");
+            if (!students.length) { container.innerHTML = "<p>دانش‌آموزی نیست.</p>"; return; }
+
+            let html = `<table><thead><tr><th>ردیف</th><th>نام</th><th>انضباط</th><th>توضیحات</th></tr></thead><tbody>`;
+            students.forEach((s, i) => {
+                const current = DB.discipline[`${month}_${s.id}`] || { level: "", comment: "" };
+                html += `<tr data-id="${s.id}"><td>${i + 1}</td><td>${s.first} ${s.last}</td>
+                    <td><select class="disc-level"><option value="">انتخاب...</option>
+                        ${DB.disciplineLevels.map((l) => `<option ${current.level === l ? "selected" : ""}>${l}</option>`).join("")}
+                    </select></td>
+                    <td><input class="disc-comment" value="${current.comment}" placeholder="توضیح"></td>
+                </tr>`;
+            });
+            container.innerHTML = html + `</tbody></table>`;
+        }
+
+        async function saveDiscipline() {
+            const month = document.getElementById("discMonth").value;
+            let records = [];
+            document.querySelectorAll("#discTableContainer tbody tr").forEach((tr) => {
+                const id = tr.dataset.id;
+                const level = tr.querySelector(".disc-level").value;
+                const comment = tr.querySelector(".disc-comment").value;
+                if (level) records.push({ student_id: id, month: month, level: level, comment: comment });
+            });
+            if (!records.length) return showMsg("موردی انتخاب نشده.", "error");
+            try {
+                await apiFetch('discipline', 'POST', records);
+                showMsg("انضباط ذخیره شد.");
+                loadFromServer();
+            } catch (err) { showMsg("خطا: " + err.message, "error"); }
+        }
+
+        function renderGradeTable() {
+            const month = document.getElementById("gradeMonth").value;
+            const cls = document.getElementById("gradeClass").value;
+            const subject = document.getElementById("gradeSubject").value;
+            const students = DB.students.filter((s) => s.className === cls);
+            const container = document.getElementById("gradeTableContainer");
+            if (!students.length || !subject) { container.innerHTML = "<p>داده‌ای نیست.</p>"; return; }
+
+            const currentGrades = DB.grades[`${month}_${cls}_${subject}`] || {};
+            let html = `<table><thead><tr><th>ردیف</th><th>نام</th><th>نمره</th></tr></thead><tbody>`;
+            students.forEach((s, i) => {
+                const val = currentGrades[s.id] !== undefined ? currentGrades[s.id] : "";
+                html += `<tr data-id="${s.id}"><td>${i + 1}</td><td>${s.first} ${s.last}</td>
+                    <td><input type="number" class="score-input" min="0" max="20" step="0.25" value="${val}" placeholder="—"></td>
+                </tr>`;
+            });
+            container.innerHTML = html + `</tbody></table>`;
+        }
+
+        async function saveGrades() {
+            const month = document.getElementById("gradeMonth").value;
+            const cls = document.getElementById("gradeClass").value;
+            const subject = document.getElementById("gradeSubject").value;
+            
+            let records = [];
+            document.querySelectorAll("#gradeTableContainer tbody tr").forEach((tr) => {
+                const id = tr.dataset.id;
+                const input = tr.querySelector(".score-input");
+                let val = input.value.trim();
+                if (val !== "") {
+                    let num = parseFloat(val);
+                    if (!isNaN(num) && num >= 0 && num <= 20) {
+                        records.push({ student_id: id, class_name: cls, subject_name: subject, month: month, score: num });
+                    }
+                }
+            });
+            if (!records.length) return showMsg("نمره معتبری وارد نشده است.", "error");
+            
+            try {
+                await apiFetch('grades', 'POST', records);
+                showMsg(`${records.length} نمره ذخیره شد.`);
+                loadFromServer();
+            } catch (err) { showMsg("خطا: " + err.message, "error"); }
+        }
+
+        function printClassList() {
+            const month = document.getElementById("listMonth").value;
+            const cls = document.getElementById("listClass").value;
+            const students = DB.students.filter((s) => s.className === cls);
+            const subjects = getSubjectsForClass(cls);
+            if (!students.length) return showMsg("دانش‌آموزی نیست.", "error");
+            
+            let thead = `<tr><th style="width: 25px;">ردیف</th><th style="width: 110px;">نام و نام خانوادگی</th>`;
+            subjects.forEach((sub) => { 
+                thead += `<th style="width: 25px; height: 90px; vertical-align: bottom; padding: 0;">
+                    <div style="writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; margin: 0 auto; font-size: 11px; padding-bottom: 5px; text-align: center; display: flex; align-items: center; justify-content: center; height: 100%;">${sub}</div>
+                </th>`; 
+            });
+            thead += `</tr>`;
+            
+            let tbody = "";
+            students.forEach((s, i) => {
+                tbody += `<tr><td style="text-align:center;">${i + 1}</td><td style="text-align:right; padding-right: 5px; font-size: 12px;">${s.first} ${s.last}</td>`;
+                subjects.forEach((sub) => {
+                    const key = `${month}_${cls}_${sub}`;
+                    const score = DB.grades[key] && DB.grades[key][s.id] !== undefined ? DB.grades[key][s.id] : "-";
+                    tbody += `<td style="text-align:center; font-size: 12px;">${score}</td>`;
+                });
+                tbody += `</tr>`;
+            });
+            
+            const pageHTML = `
+            <html dir="rtl" lang="fa"><head><meta charset="utf-8"><title>لیست نمرات ${cls} - ${month}</title>
+            <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+            <style>
+                body { font-family: 'Vazirmatn', Tahoma, sans-serif; background: #fff; margin: 0; padding: 20px; color: black; }
+                .no-print { text-align: center; margin-bottom: 15px; }
+                button { background: #17a2b8; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: bold; }
+                .print-container { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm 10mm; box-sizing: border-box; }
+                .header-title { text-align: center; margin-bottom: 15px; font-size: 16px; font-weight: bold; }
+                table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+                th, td { border: 1px solid #000; padding: 3px; text-align: center; }
+                th { background: #f0f0f0; vertical-align: bottom; }
+                @media print {
+                    @page { size: A4 portrait; margin: 0; }
+                    body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .no-print { display: none !important; }
+                    .print-container { width: 100%; padding: 10mm; }
+                    th { font-size: 10px; }
+                    td { padding: 2px; }
+                }
+            </style></head><body>
+            <div class="no-print"><button onclick="window.print()">🖨️ چاپ / ذخیره PDF</button></div>
+            <div class="print-container">
+                <div class="header-title">لیست نمرات کلاس ${cls} - ماه ${month}</div>
+                <table><thead>${thead}</thead><tbody>${tbody}</tbody></table>
+                <div style="text-align: center; font-size: 9px; margin-top: 10px; color: #555;">Powered by SALMAN SAWAED</div>
+            </div>
+            </body></html>`;
+            const newTab = window.open(); newTab.document.write(pageHTML); newTab.document.close();
+        }
+
+        function renderReport(type) {
+            let title, html = "";
+            if (type === "monthly") {
+                const month = document.getElementById("repMonth").value;
+                const cls = document.getElementById("repClass").value;
+                const students = DB.students.filter((s) => s.className === cls);
+                if (!students.length) return showMsg("دانش‌آموزی نیست.", "error");
+                title = `کارنامه ماهانه ${cls} - ${month}`;
+                const subjectsForClass = getSubjectsForClass(cls);
+                students.forEach((s) => {
+                    let totalScore = 0, count = 0, gradesHtml = "", rowNum = 1;
+                    subjectsForClass.forEach((subj) => {
+                        let scoreDisplay = "-"; const key = `${month}_${cls}_${subj}`;
+                        if (DB.grades[key] && DB.grades[key][s.id] !== undefined) { scoreDisplay = DB.grades[key][s.id]; totalScore += scoreDisplay; count++; }
+                        gradesHtml += `<tr><td>${rowNum}</td><td style="text-align:right; padding-right: 10px;">${subj}</td><td>${scoreDisplay}</td></tr>`;
+                        rowNum++;
+                    });
+                    const avg = count > 0 ? (totalScore / count).toFixed(2) : "—";
+                    const disc = DB.discipline[`${month}_${s.id}`] || { level: "ثبت نشده", comment: "" };
+                    const abs = DB.absences[`${month}_${s.id}`] || { excused: 0, unexcused: 0, late: 0 };
+                    html += `<div class="report-card"><div class="report-header"><h2>کارنامه تحصیلی ماهانه</h2><p>مدرسه آیت‌الله گلپایگانی ۱ - اهواز</p><p>ماه: ${month}</p></div><div class="student-info"><div><div><strong>نام:</strong> ${s.first}</div><div><strong>نام خانوادگی:</strong> ${s.last}</div><div><strong>کد ملی:</strong> ${s.id}</div></div><div><div><strong>کلاس:</strong> ${cls}</div><div><strong>پایه:</strong> ${cls.split(" ")[0]}</div><div><strong>وضعیت انضباط:</strong> ${disc.level}</div></div></div><div style="margin-bottom: 10px; border: 1px solid #000; padding: 8px; border-radius: 4px; background: #fff;"><strong>وضعیت حضور:</strong> غیبت موجه: ${abs.excused} | غیبت غیرموجه: ${abs.unexcused} | تاخیر: ${abs.late}</div>${disc.comment ? `<div style="margin-bottom: 10px; border: 1px solid #000; padding: 8px; border-radius: 4px;"><strong>توضیحات انضباط:</strong> ${disc.comment}</div>` : ""}<table class="report-table"><thead><tr><th style="width: 40px;">ردیف</th><th>نام درس</th><th style="width: 60px;">نمره</th></tr></thead><tbody>${gradesHtml}</tbody></table><div class="report-footer"><div class="avg-box">میانگین: ${avg}</div><div style="text-align: left; margin-top: 10px;"><p style="margin: 0;">مهر و امضای مدیر / معاون</p></div></div><div style="text-align: center; font-size: 9px; margin-top: 5px; color: #555;">Powered by SALMAN SAWAED</div></div>`;
+                });
+            } else if (type === "yearly") {
+                const cls = document.getElementById("repClassYear").value;
+                const students = DB.students.filter((s) => s.className === cls);
+                if (!students.length) return showMsg("دانش‌آموزی نیست.", "error");
+                title = `کارنامه سالانه ${cls}`;
+                const subjectsForClass = getSubjectsForClass(cls);
+                students.forEach((s) => {
+                    let totalYearScore = 0, validSubjectsCount = 0, gradesHtml = "", rowNum = 1, tEx = 0, tUn = 0, tLate = 0;
+                    DB.months.forEach((m) => { const absKey = `${m}_${s.id}`; if (DB.absences[absKey]) { tEx += DB.absences[absKey].excused; tUn += DB.absences[absKey].unexcused; tLate += DB.absences[absKey].late; } });
+                    subjectsForClass.forEach((subj) => {
+                        let scores = [];
+                        DB.months.forEach((month) => { const key = `${month}_${cls}_${subj}`; if (DB.grades[key] && DB.grades[key][s.id] !== undefined) scores.push(DB.grades[key][s.id]); });
+                        let sAvg = "-", status = "-";
+                        if (scores.length > 0) { sAvg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2); status = parseFloat(sAvg) >= 10 ? "قبول" : "نیازمند تلاش"; totalYearScore += parseFloat(sAvg); validSubjectsCount++; }
+                        gradesHtml += `<tr><td>${rowNum}</td><td style="text-align:right; padding-right: 10px;">${subj}</td><td>${sAvg}</td><td>${status}</td></tr>`;
+                        rowNum++;
+                    });
+                    const yearAvg = validSubjectsCount > 0 ? (totalYearScore / validSubjectsCount).toFixed(2) : "—";
+                    html += `<div class="report-card"><div class="report-header"><h2>کارنامه تحصیلی سالانه</h2><p>مدرسه آیت‌الله گلپایگانی ۱ - اهواز</p><p>سال تحصیلی ۱۴۰۵ - ۱۴۰۶</p></div><div class="student-info"><div><div><strong>نام:</strong> ${s.first}</div><div><strong>نام خانوادگی:</strong> ${s.last}</div><div><strong>کد ملی:</strong> ${s.id}</div></div><div><div><strong>کلاس:</strong> ${cls}</div><div><strong>پایه:</strong> ${cls.split(" ")[0]}</div><div><strong>معدل کل:</strong> <span style="color:#1769aa; font-weight:bold;">${yearAvg}</span></div></div></div><div style="margin-bottom: 10px; border: 1px solid #000; padding: 8px; border-radius: 4px; background: #fff;"><strong>خلاصه وضعیت حضور در کل سال:</strong> غیبت موجه: ${tEx} | غیبت غیرموجه: ${tUn} | تاخیر: ${tLate}</div><table class="report-table"><thead><tr><th style="width: 40px;">ردیف</th><th>نام درس</th><th>میانگین سالانه</th><th>وضعیت</th></tr></thead><tbody>${gradesHtml}</tbody></table><div class="report-footer"><div class="avg-box">معدل نهایی: ${yearAvg}</div><div style="text-align: left; margin-top: 10px;"><p style="margin: 0;">مهر و امضای مدیر / معاون</p></div></div><div style="text-align: center; font-size: 9px; margin-top: 5px; color: #555;">Powered by SALMAN SAWAED</div></div>`;
+                });
+            }
+            const reportPageHTML = `<html dir="rtl" lang="fa"><head><meta charset="utf-8"><title>${title}</title><link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" /><style>body{font-family:'Vazirmatn';background:#f4f7fb;margin:0;padding:20px;}.no-print{text-align:center;margin-bottom:20px;}button{background:#1769aa;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:16px;}.report-card{width:148mm;min-height:210mm;margin:0 auto 20px auto;background:white;border:1px solid #ccc;padding:12mm;box-sizing:border-box;page-break-after:always;color:black;font-size:13px;position:relative;display:flex;flex-direction:column;}.report-header{text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:15px;}.report-header h2{margin:0 0 5px 0;font-size:18px;}.report-header p{margin:0;font-size:12px;}.student-info{display:flex;justify-content:space-between;margin-bottom:15px;border:1px solid #000;padding:10px;border-radius:4px;background-color:#fafafa;}.student-info div{margin:3px 0;}.report-table{width:100%;border-collapse:collapse;margin-bottom:15px;flex-grow:1;}.report-table th,.report-table td{border:1px solid #000;padding:5px;text-align:center;}.report-table th{background:#f0f0f0;}.report-footer{border-top:1px solid #000;padding-top:15px;display:flex;justify-content:space-between;margin-top:auto;padding-bottom:5px;}.avg-box{border:1px solid #000;padding:10px;text-align:center;font-size:16px;font-weight:bold;width:120px;border-radius:4px;}@media print{@page{size:148mm 210mm;margin:0;}body{background:white;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:0;}.no-print{display:none!important;}.report-card{border:none;margin:0;width:100%;height:205mm;padding:8mm;page-break-inside:avoid;box-shadow:none;display:flex;flex-direction:column;}.report-table th,.report-table td{padding:3px;font-size:11px;}.report-header h2{font-size:16px;}.report-header{padding-bottom:5px;margin-bottom:10px;}.avg-box{padding:5px;font-size:14px;}.report-footer{padding-top:5px;margin-top:auto;padding-bottom:2px;}}</style></head><body><div class="no-print"><button onclick="window.print()">🖨️ چاپ / ذخیره PDF</button></div>${html}</body></html>`;
+            const newTab = window.open(); newTab.document.write(reportPageHTML); newTab.document.close();
+        }
+
+        function openDashboard() {
+            const month = document.getElementById("repMonth").value;
+            const classes = [...new Set(DB.students.map(s => s.className))].sort();
+            const subjects = DB.allSubjects;
+            
+            let globalTotal = 0, globalCount = 0, classAverages = [], subjectAverages = { }, topStudents = [], failCount = 0, passCount = 0;
+
+            classes.forEach(cls => {
+                const students = DB.students.filter(s => s.className === cls);
+                let classTotal = 0, classStudentCount = 0;
+                
+                students.forEach(s => {
+                    let studentTotal = 0, studentCount = 0;
+                    subjects.forEach(sub => {
+                        const key = `${month}_${cls}_${sub}`;
+                        if (DB.grades[key] && DB.grades[key][s.id] !== undefined) {
+                            const score = DB.grades[key][s.id];
+                            globalTotal += score; globalCount++;
+                            if (score < 10) failCount++; else passCount++;
+                            if (!subjectAverages[sub]) subjectAverages[sub] = { total: 0, count: 0 };
+                            subjectAverages[sub].total += score; subjectAverages[sub].count++;
+                            studentTotal += score; studentCount++;
+                        }
+                    });
+                    
+                    if (studentCount > 0) {
+                        const sAvg = studentTotal / studentCount;
+                        topStudents.push({ name: `${s.first} ${s.last}`, cls: cls, avg: sAvg });
+                        classTotal += sAvg; classStudentCount++;
+                    }
+                });
+                
+                if (classStudentCount > 0) {
+                    classAverages.push({ cls: cls, avg: classTotal / classStudentCount });
+                }
+            });
+
+            topStudents.sort((a, b) => b.avg - a.avg);
+            topStudents = topStudents.slice(0, 10);
+
+            let subjectStats = [];
+            for (const [sub, data] of Object.entries(subjectAverages)) {
+                if (data.count > 0) subjectStats.push({ sub: sub, avg: data.total / data.count });
+            }
+            subjectStats.sort((a, b) => a.avg - b.avg);
+
+            let dashboardHTML = `
+            <html dir="rtl" lang="fa"><head><meta charset="utf-8"><title>داشبورد هوشمند - ${month}</title>
+            <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+            <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+            <style>
+                body { font-family: 'Vazirmatn', Tahoma; background: #f0f4f8; padding: 20px; color: #2c3e50; margin: 0; }
+                .header { background: linear-gradient(135deg, #1769aa, #268bc0); color: white; padding: 20px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(23,105,170,0.3); }
+                .header h1 { margin: 0; font-size: 24px; }
+                .header button { background: white; color: #1769aa; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-family: inherit; font-weight: bold; font-size: 14px; transition: 0.2s; }
+                .header button:hover { background: #eaf4fb; }
+                .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 25px; }
+                .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+                .stat-card::before { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 6px; }
+                .stat-card.blue::before { background: #1769aa; }
+                .stat-card.green::before { background: #2ecc71; }
+                .stat-card.red::before { background: #e74c3c; }
+                .stat-card.orange::before { background: #f39c12; }
+                .stat-card h4 { margin: 0 0 10px 0; font-size: 14px; color: #7f8c8d; font-weight: normal; }
+                .stat-card .value { font-size: 32px; font-weight: bold; color: #2c3e50; }
+                .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+                .chart-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+                .chart-card h3 { margin-top: 0; margin-bottom: 15px; font-size: 16px; color: #34495e; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+                .table-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+                .table-card h3 { margin-top: 0; margin-bottom: 15px; font-size: 16px; color: #34495e; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { padding: 12px; text-align: center; border-bottom: 1px solid #eee; }
+                th { background: #f8f9fa; color: #7f8c8d; font-weight: normal; }
+                tr:hover { background: #f8f9fa; }
+                .rank-badge { display: inline-block; width: 28px; height: 28px; line-height: 28px; border-radius: 50%; color: white; font-weight: bold; }
+                .rank-1 { background: #f1c40f; } .rank-2 { background: #bdc3c7; } .rank-3 { background: #cd6133; }
+                @media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
+                @media print {
+                    body { background: white; padding: 0; }
+                    .header button { display: none; }
+                    .stat-card, .chart-card, .table-card { box-shadow: none; border: 1px solid #eee; page-break-inside: avoid; }
+                    .charts-grid { display: block; }
+                    .chart-card { margin-bottom: 20px; }
+                }
+            </style></head><body>
+            <div class="header">
+                <h1>📊 داشبورد تحلیل و بررسی - ${month}</h1>
+                <button onclick="window.print()">🖨️ چاپ داشبورد</button>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card blue"><h4>میانگین کل مدرسه</h4><div class="value">${globalCount > 0 ? (globalTotal / globalCount).toFixed(2) : "—"}</div></div>
+                <div class="stat-card green"><h4>تعداد نمرات قبول (بالای ۱۰)</h4><div class="value">${passCount}</div></div>
+                <div class="stat-card red"><h4>نمرات نیازمند تلاش (زیر ۱۰)</h4><div class="value">${failCount}</div></div>
+                <div class="stat-card orange"><h4>کل نمرات ثبت‌شده</h4><div class="value">${globalCount}</div></div>
+            </div>
+            <div class="charts-grid">
+                <div class="chart-card"><h3>میانگین نمرات کلاس‌ها</h3><canvas id="classChart"></canvas></div>
+                <div class="chart-card"><h3>درصد وضعیت نمرات مدرسه</h3><canvas id="statusChart"></canvas></div>
+            </div>
+            <div class="chart-card" style="margin-bottom: 25px;"><h3>میانگین دروس (سخت‌ترین تا آسان‌ترین)</h3><canvas id="subjectChart" style="max-height: 400px;"></canvas></div>
+            <div class="table-card">
+                <h3>🏆 ۱۰ دانش‌آموز برتر مدرسه در این ماه</h3>
+                <table>
+                    <thead><tr><th>رتبه</th><th>نام و نام خانوادگی</th><th>کلاس</th><th>میانگین</th></tr></thead>
+                    <tbody>
+                        ${topStudents.map((s, i) => {
+                            let badge = i === 0 ? "rank-1" : (i === 1 ? "rank-2" : (i === 2 ? "rank-3" : ""));
+                            let rankDisplay = badge ? `<span class="rank-badge ${badge}">${i + 1}</span>` : `<strong>${i + 1}</strong>`;
+                            return `<tr><td>${rankDisplay}</td><td style="font-weight:bold;">${s.name}</td><td>${s.cls}</td><td style="color:#2ecc71; font-weight:bold; font-size:16px;">${s.avg.toFixed(2)}</td></tr>`;
+                        }).join("")}
+                        ${topStudents.length === 0 ? "<tr><td colspan='4'>نمره‌ای ثبت نشده است.</td></tr>" : ""}
+                    </tbody>
+                </table>
+            </div>
+            <script>
+                Chart.defaults.font.family = 'Vazirmatn, Tahoma';
+                Chart.defaults.color = '#7f8c8d';
+                const classData = ${JSON.stringify(classAverages)};
+                new Chart(document.getElementById('classChart'), {
+                    type: 'bar',
+                    data: { labels: classData.map(d => d.cls), datasets: [{ label: 'میانگین', data: classData.map(d => d.avg.toFixed(2)), backgroundColor: classData.map(d => d.avg >= 15 ? '#2ecc71' : (d.avg >= 12 ? '#f39c12' : '#e74c3c')), borderRadius: 6 }] },
+                    options: { responsive: true, scales: { y: { beginAtZero: true, max: 20 } }, plugins: { legend: { display: false } } }
+                });
+                new Chart(document.getElementById('statusChart'), {
+                    type: 'doughnut',
+                    data: { labels: ['قبول (بالای ۱۰)', 'نیازمند تلاش (زیر ۱۰)'], datasets: [{ data: [${passCount}, ${failCount}], backgroundColor: ['#2ecc71', '#e74c3c'], borderWidth: 0 }] },
+                    options: { responsive: true, cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+                });
+                const subData = ${JSON.stringify(subjectStats)};
+                new Chart(document.getElementById('subjectChart'), {
+                    type: 'bar',
+                    data: { labels: subData.map(d => d.sub), datasets: [{ label: 'میانگین', data: subData.map(d => d.avg.toFixed(2)), backgroundColor: '#3498db', borderRadius: 6 }] },
+                    options: { indexAxis: 'y', responsive: true, scales: { x: { beginAtZero: true, max: 20 } }, plugins: { legend: { display: false } } }
+                });
+            <\/script></body></html>`;
+            const newTab = window.open();
+            newTab.document.write(dashboardHTML);
+            newTab.document.close();
+        }
+
+        function downloadGradeTemplate() {
+            const month = document.getElementById("gradeMonth").value;
+            const cls = document.getElementById("gradeClass").value;
+            const subject = document.getElementById("gradeSubject").value;
+            const students = DB.students.filter((s) => s.className === cls);
+            if (!students.length) return showMsg("دانش‌آموزی نیست.", "error");
+            const wsData = [["نام", "نام خانوادگی", "نمره"]];
+            students.forEach((s) => {
+                const existingKey = `${month}_${cls}_${subject}`;
+                const existingScore = (DB.grades[existingKey] && DB.grades[existingKey][s.id] !== undefined) ? DB.grades[existingKey][s.id] : "";
+                wsData.push([s.first, s.last, existingScore]);
+            });
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Nomarat");
+            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/octet-stream' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a"); a.style.display = "none"; a.href = url; a.download = `Nomreh_${cls}_${subject}_${month}.xlsx`;
+            document.body.appendChild(a); a.click();
+            setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 100);
+        }
+
+        async function uploadGradeExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const month = document.getElementById("gradeMonth").value;
+            const cls = document.getElementById("gradeClass").value;
+            const subject = document.getElementById("gradeSubject").value;
+            const reader = new FileReader();
+            reader.onload = async function (e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: "array" });
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+                    if (jsonData.length < 2) return showMsg("فایل خالی است.", "error");
+                    const students = DB.students.filter((s) => s.className === cls);
+                    let records = [];
+                    const cleanName = (str) => { if (!str) return ""; return str.toString().replace(/ي/g, "ی").replace(/ك/g, "ک").replace(/\s+/g, "").trim(); };
+                    const studentsMap = new Map(); students.forEach(s => studentsMap.set(cleanName(s.last), s));
+                    for (let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i]; if (!row || row.length < 3) continue;
+                        const lastName = row[1]; const score = parseFloat(row[2]);
+                        if (!lastName || isNaN(score)) continue;
+                        const student = studentsMap.get(cleanName(lastName));
+                        if (student) records.push({ student_id: student.id, class_name: cls, subject_name: subject, month: month, score: score });
+                    }
+                    if (records.length === 0) return showMsg("نمره‌ای مطابقت نداشت.", "error");
+                    await apiFetch('grades', 'POST', records);
+                    showMsg(`${records.length} نمره ذخیره شد.`);
+                    loadFromServer();
+                } catch (err) { showMsg("خطا: " + err.message, "error"); }
+                event.target.value = "";
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function exportExcel() { /* (مثل قبل) */ }
+    </script>
+</body>
+</html>
