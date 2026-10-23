@@ -904,30 +904,62 @@
         }
 
         async function saveGrades() {
-            const month = document.getElementById("gradeMonth").value;
-            const cls = document.getElementById("gradeClass").value;
-            const subject = document.getElementById("gradeSubject").value;
-            
-            let records = [];
-            document.querySelectorAll("#gradeTableContainer tbody tr").forEach((tr) => {
-                const id = tr.dataset.id;
-                const input = tr.querySelector(".score-input");
-                let val = input.value.trim();
-                if (val !== "") {
-                    let num = parseFloat(val);
-                    if (!isNaN(num) && num >= 0 && num <= 20) {
-                        records.push({ student_id: id, class_name: cls, subject_name: subject, month: month, score: num });
-                    }
-                }
-            });
-            if (!records.length) return showMsg("نمره معتبری وارد نشده است.", "error");
-            
-            try {
-                await apiFetch('grades', 'POST', records);
-                showMsg(`${records.length} نمره ذخیره شد.`);
-                loadFromServer();
-            } catch (err) { showMsg("خطا: " + err.message, "error"); }
+    const month = document.getElementById("gradeMonth").value;
+    const cls = document.getElementById("gradeClass").value;
+    const subject = document.getElementById("gradeSubject").value;
+    
+    let records = [];
+    document.querySelectorAll("#gradeTableContainer tbody tr").forEach((tr) => {
+        const id = tr.dataset.id;
+        const input = tr.querySelector(".score-input");
+        let val = input.value.trim();
+        if (val !== "") {
+            let num = parseFloat(val);
+            if (!isNaN(num) && num >= 0 && num <= 20) {
+                records.push({ student_id: id, class_name: cls, subject_name: subject, month: month, score: num });
+            }
         }
+    });
+    if (!records.length) return showMsg("نمره معتبری وارد نشده است.", "error");
+    
+    showMsg("در حال ذخیره...", "success");
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const record of records) {
+        try {
+            const response = await fetch(${SUPABASE_URL}/rest/v1/grades?on_conflict=student_id,subject_name,month, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': Bearer ${SUPABASE_KEY},
+                    'Content-Type': 'application/json',
+                    'Prefer': 'resolution=merge-duplicates'
+                },
+                body: JSON.stringify(record)
+            });
+
+            if (response.ok) {
+                successCount++;
+            } else {
+                errorCount++;
+                const errText = await response.text();
+                console.error("خطا در ذخیره نمره:", errText);
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 50));
+        } catch (err) {
+            errorCount++;
+        }
+    }
+
+    if (errorCount > 0) {
+        showMsg(${successCount} نمره ذخیره شد. ${errorCount} نمره خطا داد. (کنسول را بررسی کنید), "error");
+    } else {
+        showMsg(تغییرات با موفقیت ذخیره شد. (${successCount} نمره), "success");
+        await loadFromServer(); // رفرش داده‌ها از سرور
+    }
+}
 
         function printClassList() {
             const month = document.getElementById("listMonth").value;
