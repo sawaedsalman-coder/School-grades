@@ -859,21 +859,57 @@
         }
 
         async function saveDiscipline() {
-            const month = document.getElementById("discMonth").value;
-            let records = [];
-            document.querySelectorAll("#discTableContainer tbody tr").forEach((tr) => {
-                const id = tr.dataset.id;
-                const level = tr.querySelector(".disc-level").value;
-                const comment = tr.querySelector(".disc-comment").value;
-                if (level) records.push({ student_id: id, month: month, level: level, comment: comment });
-            });
-            if (!records.length) return showMsg("موردی انتخاب نشده.", "error");
-            try {
-                await apiFetch('discipline', 'POST', records);
-                showMsg("انضباط ذخیره شد.");
-                loadFromServer();
-            } catch (err) { showMsg("خطا: " + err.message, "error"); }
+    const month = document.getElementById("discMonth").value;
+    const cls = document.getElementById("discClass").value;
+    if (!month || !cls) return showMsg("لطفاً ماه و کلاس را انتخاب کنید.", "error");
+
+    let records = [];
+    document.querySelectorAll("#discTableContainer tbody tr").forEach((tr) => {
+        const id = tr.dataset.id;
+        const level = tr.querySelector(".disc-level").value;
+        const comment = tr.querySelector(".disc-comment").value;
+        // فقط ردیف‌هایی که سطح انضباط برایشان انتخاب شده است
+        if (level) {
+            records.push({ student_id: id, month: month, level: level, comment: comment });
         }
+    });
+
+    if (!records.length) return showMsg("هیچ موردی برای ذخیره انتخاب نشده است.", "error");
+
+    showMsg("در حال ذخیره انضباط...", "success");
+    let successCount = 0;
+    let errorCount = 0;
+
+    // ارسال تک‌تک برای جلوگیری از خطای 409
+    for (const record of records) {
+        try {
+            const response = await fetch(${SUPABASE_URL}/rest/v1/discipline?on_conflict=student_id,month, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': Bearer ${SUPABASE_KEY},
+                    'Content-Type': 'application/json',
+                    'Prefer': 'resolution=merge-duplicates'
+                },
+                body: JSON.stringify(record)
+            });
+
+            if (response.ok) successCount++;
+            else errorCount++;
+            
+            await new Promise(resolve => setTimeout(resolve, 50));
+        } catch (err) {
+            errorCount++;
+        }
+    }
+
+    if (errorCount > 0) {
+        showMsg(${successCount} مورد ذخیره شد. ${errorCount} مورد خطا داد., "error");
+    } else {
+        showMsg(تغییرات با موفقیت ذخیره شد. (${successCount} مورد), "success");
+        await loadFromServer();
+    }
+}
 
         function renderGradeTable() {
             const month = document.getElementById("gradeMonth").value;
