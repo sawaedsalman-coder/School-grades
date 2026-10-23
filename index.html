@@ -177,13 +177,21 @@
                     <div id="teachersListContainer"></div>
                 </div>
 
-                <div id="sec-tools" class="card hidden">
-                    <h3>ابزارهای مدیریتی</h3>
-                    <div class="row">
-                        <button class="secondary" onclick="loadFromServer()">🔄 بروزرسانی اطلاعات از سرور</button>
-                        <button class="success" onclick="openDashboard()">📊 داشبورد تحلیل</button>
-                    </div>
-                </div>
+               <div id="sec-tools" class="card hidden">
+    <h3>ابزارهای مدیریتی و پشتیبان‌گیری</h3>
+    <div class="row">
+        <button class="secondary" onclick="loadFromServer()">🔄 بروزرسانی اطلاعات از سرور</button>
+        <button class="success" onclick="openDashboard()">📊 داشبورد تحلیل</button>
+    </div>
+    <div class="row" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
+        <button class="warning" onclick="backupData()">💾 دریافت فایل پشتیبان (Backup)</button>
+        <input type="file" id="restoreFile" accept=".json" style="display:none;" onchange="restoreData(event)">
+        <button class="warning" onclick="document.getElementById('restoreFile').click()">📂 بازیابی از فایل پشتیبان</button>
+    </div>
+    <p style="font-size: 13px; color: #666; margin-bottom: 0;">
+        <strong>توجه:</strong> اطلاعات در دیتابیس آنلاین ذخیره می‌شوند. برای اطمینان بیشتر، هر چند وقت یک بار فایل پشتیبان تهیه کنید.
+    </p>
+</div>
 
                 <div id="sec-absences" class="card hidden" style="border-right: 5px solid #e74c3c">
                     <h3>ثبت غیبت و تاخیر</h3>
@@ -1287,6 +1295,55 @@
         }
 
         function exportExcel() { /* (مثل قبل) */ }
+        
+// --- توابع پشتیبان‌گیری و بازیابی ---
+function backupData() {
+    // ایجاد یک آبجکت از داده‌های فعلی موجود در حافظه
+    const backupObj = {
+        students: DB.students,
+        teachers: DB.teachers,
+        teacherAssignments: DB.teacherAssignments,
+        grades: DB.grades,
+        absences: DB.absences,
+        discipline: DB.discipline
+    };
+    
+    const dataStr = JSON.stringify(backupObj, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    const date = new Date().toLocaleDateString("fa-IR").replace(/\//g, "-");
+    link.download = `Backup_School_${date}.json`;
+    link.click();
+    showMsg("فایل پشتیبان با موفقیت دانلود شد.");
+}
+
+function restoreData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            if (parsed.students && parsed.grades) {
+                // بازگردانی اطلاعات به حافظه
+                DB.students = parsed.students;
+                DB.teachers = parsed.teachers || [];
+                DB.teacherAssignments = parsed.teacherAssignments || [];
+                DB.grades = parsed.grades || {};
+                DB.absences = parsed.absences || {};
+                DB.discipline = parsed.discipline || {};
+                
+                // رفرش رابط کاربری
+                initUI();
+                renderTeachersList();
+                showMsg("اطلاعات با موفقیت در برنامه بازیابی شد (فقط در حافظه).", "success");
+            } else { showMsg("فایل نامعتبر است.", "error"); }
+        } catch (err) { showMsg("خطا در خواندن فایل.", "error"); }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
+}
     </script>
 </body>
 </html>
