@@ -858,7 +858,7 @@
             container.innerHTML = html + `</tbody></table>`;
         }
 
-        async function saveDiscipline() {
+       async function saveDiscipline() {
     const month = document.getElementById("discMonth").value;
     const cls = document.getElementById("discClass").value;
     if (!month || !cls) return showMsg("لطفاً ماه و کلاس را انتخاب کنید.", "error");
@@ -880,9 +880,9 @@
     let successCount = 0;
     let errorCount = 0;
 
-    // ارسال تک‌تک برای جلوگیری از خطای 409
     for (const record of records) {
         try {
+            // استفاده از on_conflict برای آپدیت کردن در صورت وجود
             const response = await fetch(${SUPABASE_URL}/rest/v1/discipline?on_conflict=student_id,month, {
                 method: 'POST',
                 headers: {
@@ -908,6 +908,7 @@
     } else {
         showMsg(تغییرات با موفقیت ذخیره شد. (${successCount} مورد), "success");
         await loadFromServer();
+        renderDisciplineTable(); // رفرش جدول
     }
 }
 
