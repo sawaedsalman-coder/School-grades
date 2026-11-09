@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -290,21 +291,41 @@
         let currentAssignTeacherId = null;
         let currentAbsencesInitialState = {};
 
-        // تابع پاکسازی برای تطبیق هوشمند
         function cleanStr(str) {
             if (!str) return "";
             return String(str).replace(/ي/g, "ی").replace(/ك/g, "ک").replace(/\s+/g, "").trim();
         }
 
-        // تابع جدید برای پیدا کردن نمره با تطبیق هوشمند
-        function findGrade(month, cls, subj, studentId) {
+        // تابع جدید برای پیدا کردن نمره و برگرداندن نام دقیق درس
+        function findGradeInfo(month, cls, subj, studentId) {
             const target = cleanStr(`${month}_${cls}_${subj}`);
             for (const dbKey in DB.grades) {
                 if (cleanStr(dbKey) === target) {
-                    return DB.grades[dbKey][studentId];
+                    return { score: DB.grades[dbKey][studentId], realSubj: subj };
                 }
             }
-            return undefined;
+            return { score: undefined, realSubj: subj };
+        }
+
+        // تابع جدید برای دریافت لیست دروسی که واقعاً نمره دارند
+        function getActualSubjects(month, cls) {
+            const subjectsSet = new Set();
+            const targetCleanClass = cleanStr(cls);
+            const targetCleanMonth = cleanStr(month);
+
+            for (const dbKey in DB.grades) {
+                const parts = dbKey.split('_');
+                if (parts.length >= 3) {
+                    const dbMonth = cleanStr(parts[0]);
+                    const dbClass = cleanStr(parts[1]);
+                    const dbSubj = parts.slice(2).join('_');
+                    
+                    if (dbMonth === targetCleanMonth && dbClass === targetCleanClass) {
+                        subjectsSet.add(dbSubj);
+                    }
+                }
+            }
+            return Array.from(subjectsSet);
         }
 
         async function apiFetch(table, method = 'GET', body = null) {
@@ -436,39 +457,13 @@
             renderDisciplineTable();
         }
 
-function getSubjectsForClass(cls) {
-    if (!cls) return DB.allSubjects;
-    
-    // لیست پایه بر اساس کلاس
-    let baseSubjects = [...DB.allSubjects];
-    if (cls.includes("نهم")) {
-        baseSubjects = baseSubjects.filter((sub) => sub !== "تفکر و سبک زندگی");
-    } else if (cls.includes("هفتم") || cls.includes("هشتم")) {
-        baseSubjects = baseSubjects.filter((sub) => sub !== "آمادگی دفاعی");
-    }
-    
-    // * بخش جدید: اضافه کردن درس‌هایی که نمره دارند اما در لیست پایه نیستند *
-    const extraSubjects = new Set();
-    
-    // جستجو در همه کلیدهای دیتابیس
-    for (const dbKey in DB.grades) {
-        // کلیدها به شکل "ماه_کلاس_درس" هستند
-        const parts = dbKey.split('_');
-        if (parts.length >= 3) {
-            const dbMonth = parts[0];
-            const dbClass = parts[1];
-            const dbSubject = parts.slice(2).join('_'); // اگر نام درس دارای _ باشد
-            
-            // اگر این نمره مربوط به همین کلاس بود و درسش در لیست پایه نبود
-            if (cleanStr(dbClass) === cleanStr(cls) && !baseSubjects.some(s => cleanStr(s) === cleanStr(dbSubject))) {
-                extraSubjects.add(dbSubject);
-            }
+        function getSubjectsForClass(cls) {
+            // فقط برای پر کردن منوهای کشویی دبیر و تخصیص
+            if (!cls) return DB.allSubjects;
+            if (cls.includes("نهم")) return DB.allSubjects.filter((sub) => sub !== "تفکر و سبک زندگی");
+            if (cls.includes("هفتم") || cls.includes("هشتم")) return DB.allSubjects.filter((sub) => sub !== "آمادگی دفاعی");
+            return DB.allSubjects;
         }
-    }
-    
-    // ترکیب لیست پایه با درس‌های اضافی
-    return [...baseSubjects, ...Array.from(extraSubjects)];
-}
 
         function updateModalSubjects() {
             const cls = document.getElementById("modalClass").value;
@@ -1035,8 +1030,11 @@ function getSubjectsForClass(cls) {
             const month = document.getElementById("listMonth").value;
             const cls = document.getElementById("listClass").value;
             const students = DB.students.filter((s) => s.className === cls);
-            const subjects = getSubjectsForClass(cls);
+            
+            // دریافت دروس واقعی که نمره دارند
+            const subjects = getActualSubjects(month, cls);
             if (!students.length) return showMsg("دانش‌آموزی نیست.", "error");
+            if (!subjects.length) return showMsg("هیچ نمره‌ای برای این کلاس در این ماه ثبت نشده است.", "error");
             
             let thead = `<tr><th style="width: 25px;">ردیف</th><th style="width: 110px;">نام و نام خانوادگی</th>`;
             subjects.forEach((sub) => { 
@@ -1050,8 +1048,8 @@ function getSubjectsForClass(cls) {
             students.forEach((s, i) => {
                 tbody += `<tr><td style="text-align:center;">${i + 1}</td><td style="text-align:right; padding-right: 5px; font-size: 12px;">${s.first} ${s.last}</td>`;
                 subjects.forEach((sub) => {
-                    const score = findGrade(month, cls, sub, s.id);
-                    const scoreDisplay = (score !== undefined) ? score : "-";
+                    const info = findGradeInfo(month, cls, sub, s.id);
+                    const scoreDisplay = (info.score !== undefined) ? info.score : "-";
                     tbody += `<td style="text-align:center; font-size: 12px;">${scoreDisplay}</td>`;
                 });
                 tbody += `</tr>`;
@@ -1096,15 +1094,21 @@ function getSubjectsForClass(cls) {
                 const students = DB.students.filter((s) => s.className === cls);
                 if (!students.length) return showMsg("دانش‌آموزی نیست.", "error");
                 title = `کارنامه ماهانه ${cls} - ${month}`;
-                const subjectsForClass = getSubjectsForClass(cls);
+                
+                // دریافت دروس واقعی برای این ماه و کلاس
+                const actualSubjects = getActualSubjects(month, cls);
+                if (actualSubjects.length === 0) {
+                    return showMsg("هیچ نمره‌ای برای این کلاس در این ماه ثبت نشده است.", "error");
+                }
+
                 students.forEach((s) => {
                     let totalScore = 0, count = 0, gradesHtml = "", rowNum = 1;
-                    subjectsForClass.forEach((subj) => {
+                    actualSubjects.forEach((subj) => {
                         let scoreDisplay = "-";
-                        const foundScore = findGrade(month, cls, subj, s.id);
+                        const info = findGradeInfo(month, cls, subj, s.id);
 
-                        if (foundScore !== undefined) {
-                            scoreDisplay = foundScore;
+                        if (info.score !== undefined) {
+                            scoreDisplay = info.score;
                             totalScore += scoreDisplay;
                             count++;
                         }
@@ -1121,16 +1125,28 @@ function getSubjectsForClass(cls) {
                 const students = DB.students.filter((s) => s.className === cls);
                 if (!students.length) return showMsg("دانش‌آموزی نیست.", "error");
                 title = `کارنامه سالانه ${cls}`;
-                const subjectsForClass = getSubjectsForClass(cls);
+                
+                // برای کارنامه سالانه، باید دروس را از همه ماه‌ها جمع کنیم
+                const yearlySubjects = new Set();
+                DB.months.forEach(m => {
+                    getActualSubjects(m, cls).forEach(sub => yearlySubjects.add(sub));
+                });
+                const actualSubjects = Array.from(yearlySubjects);
+                
+                if (actualSubjects.length === 0) {
+                    return showMsg("هیچ نمره‌ای برای این کلاس در طول سال ثبت نشده است.", "error");
+                }
+
                 students.forEach((s) => {
                     let totalYearScore = 0, validSubjectsCount = 0, gradesHtml = "", rowNum = 1, tEx = 0, tUn = 0, tLate = 0;
                     DB.months.forEach((m) => { const absKey = `${m}_${s.id}`; if (DB.absences[absKey]) { tEx += DB.absences[absKey].excused; tUn += DB.absences[absKey].unexcused; tLate += DB.absences[absKey].late; } });
-                    subjectsForClass.forEach((subj) => {
+                    
+                    actualSubjects.forEach((subj) => {
                         let scores = [];
                         
                         DB.months.forEach((month) => { 
-                            const foundScore = findGrade(month, cls, subj, s.id);
-                            if (foundScore !== undefined) scores.push(foundScore);
+                            const info = findGradeInfo(month, cls, subj, s.id);
+                            if (info.score !== undefined) scores.push(info.score);
                         });
                         
                         let sAvg = "-", status = "-";
@@ -1149,7 +1165,6 @@ function getSubjectsForClass(cls) {
         function openDashboard() {
             const month = document.getElementById("repMonth").value;
             const classes = [...new Set(DB.students.map(s => s.className))].sort();
-            const subjects = DB.allSubjects;
             
             let globalTotal = 0, globalCount = 0, classAverages = [], subjectAverages = { }, topStudents = [], failCount = 0, passCount = 0;
 
@@ -1157,12 +1172,16 @@ function getSubjectsForClass(cls) {
                 const students = DB.students.filter(s => s.className === cls);
                 let classTotal = 0, classStudentCount = 0;
                 
+                // گرفتن دروس واقعی برای این کلاس
+                const actualSubjects = getActualSubjects(month, cls);
+                
                 students.forEach(s => {
                     let studentTotal = 0, studentCount = 0;
-                    subjects.forEach(sub => {
-                        const score = findGrade(month, cls, sub, s.id);
+                    actualSubjects.forEach(sub => {
+                        const info = findGradeInfo(month, cls, sub, s.id);
 
-                        if (score !== undefined) {
+                        if (info.score !== undefined) {
+                            const score = info.score;
                             globalTotal += score; globalCount++;
                             if (score < 10) failCount++; else passCount++;
                             if (!subjectAverages[sub]) subjectAverages[sub] = { total: 0, count: 0 };
