@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -47,7 +48,6 @@
         .badge-active { background: #28a745; }
         .badge-inactive { background: #dc3545; }
 
-        /* مودال */
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 4000; }
         .modal-content { background: white; padding: 25px; border-radius: 10px; width: 450px; max-width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .modal-content h3 { margin-top: 0; color: var(--blue); }
@@ -71,7 +71,6 @@
     </style>
 </head>
 <body>
-    <!-- مودال تخصیص -->
     <div id="assignModal" class="modal hidden">
         <div class="modal-content">
             <h3>تخصیص کلاس و درس</h3>
@@ -292,10 +291,21 @@
         let currentAssignTeacherId = null;
         let currentAbsencesInitialState = {};
 
-        // تابع پاکسازی متن برای مقایسه هوشمند
+        // تابع پاکسازی برای تطبیق هوشمند
         function cleanStr(str) {
             if (!str) return "";
             return String(str).replace(/ي/g, "ی").replace(/ك/g, "ک").replace(/\s+/g, "").trim();
+        }
+
+        // تابع جدید برای پیدا کردن نمره با تطبیق هوشمند
+        function findGrade(month, cls, subj, studentId) {
+            const target = cleanStr(`${month}_${cls}_${subj}`);
+            for (const dbKey in DB.grades) {
+                if (cleanStr(dbKey) === target) {
+                    return DB.grades[dbKey][studentId];
+                }
+            }
+            return undefined;
         }
 
         async function apiFetch(table, method = 'GET', body = null) {
@@ -1014,9 +1024,9 @@
             students.forEach((s, i) => {
                 tbody += `<tr><td style="text-align:center;">${i + 1}</td><td style="text-align:right; padding-right: 5px; font-size: 12px;">${s.first} ${s.last}</td>`;
                 subjects.forEach((sub) => {
-                    const key = `${month}_${cls}_${sub}`;
-                    const score = DB.grades[key] && DB.grades[key][s.id] !== undefined ? DB.grades[key][s.id] : "-";
-                    tbody += `<td style="text-align:center; font-size: 12px;">${score}</td>`;
+                    const score = findGrade(month, cls, sub, s.id);
+                    const scoreDisplay = (score !== undefined) ? score : "-";
+                    tbody += `<td style="text-align:center; font-size: 12px;">${scoreDisplay}</td>`;
                 });
                 tbody += `</tr>`;
             });
@@ -1065,15 +1075,7 @@
                     let totalScore = 0, count = 0, gradesHtml = "", rowNum = 1;
                     subjectsForClass.forEach((subj) => {
                         let scoreDisplay = "-";
-                        const targetCleanKey = cleanStr(`${month}_${cls}_${subj}`);
-                        let foundScore = undefined;
-
-                        for (const dbKey in DB.grades) {
-                            if (cleanStr(dbKey) === targetCleanKey) {
-                                foundScore = DB.grades[dbKey][s.id];
-                                break;
-                            }
-                        }
+                        const foundScore = findGrade(month, cls, subj, s.id);
 
                         if (foundScore !== undefined) {
                             scoreDisplay = foundScore;
@@ -1099,16 +1101,10 @@
                     DB.months.forEach((m) => { const absKey = `${m}_${s.id}`; if (DB.absences[absKey]) { tEx += DB.absences[absKey].excused; tUn += DB.absences[absKey].unexcused; tLate += DB.absences[absKey].late; } });
                     subjectsForClass.forEach((subj) => {
                         let scores = [];
-                        const targetCleanSubj = cleanStr(subj);
-
+                        
                         DB.months.forEach((month) => { 
-                            const targetCleanKey = cleanStr(`${month}_${cls}_${subj}`);
-                            for (const dbKey in DB.grades) {
-                                if (cleanStr(dbKey) === targetCleanKey && DB.grades[dbKey][s.id] !== undefined) {
-                                    scores.push(DB.grades[dbKey][s.id]);
-                                    break;
-                                }
-                            }
+                            const foundScore = findGrade(month, cls, subj, s.id);
+                            if (foundScore !== undefined) scores.push(foundScore);
                         });
                         
                         let sAvg = "-", status = "-";
@@ -1138,14 +1134,7 @@
                 students.forEach(s => {
                     let studentTotal = 0, studentCount = 0;
                     subjects.forEach(sub => {
-                        const targetCleanKey = cleanStr(`${month}_${cls}_${sub}`);
-                        let score = undefined;
-                        for (const dbKey in DB.grades) {
-                            if (cleanStr(dbKey) === targetCleanKey && DB.grades[dbKey][s.id] !== undefined) {
-                                score = DB.grades[dbKey][s.id];
-                                break;
-                            }
-                        }
+                        const score = findGrade(month, cls, sub, s.id);
 
                         if (score !== undefined) {
                             globalTotal += score; globalCount++;
