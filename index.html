@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -177,21 +176,18 @@
                     <div id="teachersListContainer"></div>
                 </div>
 
-               <div id="sec-tools" class="card hidden">
-    <h3>ابزارهای مدیریتی و پشتیبان‌گیری</h3>
-    <div class="row">
-        <button class="secondary" onclick="loadFromServer()">🔄 بروزرسانی اطلاعات از سرور</button>
-        <button class="success" onclick="openDashboard()">📊 داشبورد تحلیل</button>
-    </div>
-    <div class="row" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
-        <button class="warning" onclick="backupData()">💾 دریافت فایل پشتیبان (Backup)</button>
-        <input type="file" id="restoreFile" accept=".json" style="display:none;" onchange="restoreData(event)">
-        <button class="warning" onclick="document.getElementById('restoreFile').click()">📂 بازیابی از فایل پشتیبان</button>
-    </div>
-    <p style="font-size: 13px; color: #666; margin-bottom: 0;">
-        <strong>توجه:</strong> اطلاعات در دیتابیس آنلاین ذخیره می‌شوند. برای اطمینان بیشتر، هر چند وقت یک بار فایل پشتیبان تهیه کنید.
-    </p>
-</div>
+                <div id="sec-tools" class="card hidden">
+                    <h3>ابزارهای مدیریتی</h3>
+                    <div class="row">
+                        <button class="secondary" onclick="loadFromServer()">🔄 بروزرسانی اطلاعات از سرور</button>
+                        <button class="success" onclick="openDashboard()">📊 داشبورد تحلیل</button>
+                    </div>
+                    <div class="row" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
+                        <button class="warning" onclick="backupData()">💾 دریافت فایل پشتیبان (Backup)</button>
+                        <input type="file" id="restoreFile" accept=".json" style="display:none;" onchange="restoreData(event)">
+                        <button class="warning" onclick="document.getElementById('restoreFile').click()">📂 بازیابی از فایل پشتیبان</button>
+                    </div>
+                </div>
 
                 <div id="sec-absences" class="card hidden" style="border-right: 5px solid #e74c3c">
                     <h3>ثبت غیبت و تاخیر</h3>
@@ -295,6 +291,12 @@
 
         let currentAssignTeacherId = null;
         let currentAbsencesInitialState = {};
+
+        // تابع پاکسازی متن برای مقایسه هوشمند
+        function cleanStr(str) {
+            if (!str) return "";
+            return String(str).replace(/ي/g, "ی").replace(/ك/g, "ک").replace(/\s+/g, "").trim();
+        }
 
         async function apiFetch(table, method = 'GET', body = null) {
             const headers = {
@@ -740,7 +742,7 @@
             }
         }
 
-        // --- بخش انضباط (اصلاح‌شده) ---
+        // --- بخش انضباط ---
         function renderDisciplineTable() {
             const month = document.getElementById("discMonth").value;
             const cls = document.getElementById("discClass").value;
@@ -1062,8 +1064,22 @@
                 students.forEach((s) => {
                     let totalScore = 0, count = 0, gradesHtml = "", rowNum = 1;
                     subjectsForClass.forEach((subj) => {
-                        let scoreDisplay = "-"; const key = `${month}_${cls}_${subj}`;
-                        if (DB.grades[key] && DB.grades[key][s.id] !== undefined) { scoreDisplay = DB.grades[key][s.id]; totalScore += scoreDisplay; count++; }
+                        let scoreDisplay = "-";
+                        const targetCleanKey = cleanStr(`${month}_${cls}_${subj}`);
+                        let foundScore = undefined;
+
+                        for (const dbKey in DB.grades) {
+                            if (cleanStr(dbKey) === targetCleanKey) {
+                                foundScore = DB.grades[dbKey][s.id];
+                                break;
+                            }
+                        }
+
+                        if (foundScore !== undefined) {
+                            scoreDisplay = foundScore;
+                            totalScore += scoreDisplay;
+                            count++;
+                        }
                         gradesHtml += `<tr><td>${rowNum}</td><td style="text-align:right; padding-right: 10px;">${subj}</td><td>${scoreDisplay}</td></tr>`;
                         rowNum++;
                     });
@@ -1083,7 +1099,18 @@
                     DB.months.forEach((m) => { const absKey = `${m}_${s.id}`; if (DB.absences[absKey]) { tEx += DB.absences[absKey].excused; tUn += DB.absences[absKey].unexcused; tLate += DB.absences[absKey].late; } });
                     subjectsForClass.forEach((subj) => {
                         let scores = [];
-                        DB.months.forEach((month) => { const key = `${month}_${cls}_${subj}`; if (DB.grades[key] && DB.grades[key][s.id] !== undefined) scores.push(DB.grades[key][s.id]); });
+                        const targetCleanSubj = cleanStr(subj);
+
+                        DB.months.forEach((month) => { 
+                            const targetCleanKey = cleanStr(`${month}_${cls}_${subj}`);
+                            for (const dbKey in DB.grades) {
+                                if (cleanStr(dbKey) === targetCleanKey && DB.grades[dbKey][s.id] !== undefined) {
+                                    scores.push(DB.grades[dbKey][s.id]);
+                                    break;
+                                }
+                            }
+                        });
+                        
                         let sAvg = "-", status = "-";
                         if (scores.length > 0) { sAvg = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2); status = parseFloat(sAvg) >= 10 ? "قبول" : "نیازمند تلاش"; totalYearScore += parseFloat(sAvg); validSubjectsCount++; }
                         gradesHtml += `<tr><td>${rowNum}</td><td style="text-align:right; padding-right: 10px;">${subj}</td><td>${sAvg}</td><td>${status}</td></tr>`;
@@ -1111,9 +1138,16 @@
                 students.forEach(s => {
                     let studentTotal = 0, studentCount = 0;
                     subjects.forEach(sub => {
-                        const key = `${month}_${cls}_${sub}`;
-                        if (DB.grades[key] && DB.grades[key][s.id] !== undefined) {
-                            const score = DB.grades[key][s.id];
+                        const targetCleanKey = cleanStr(`${month}_${cls}_${sub}`);
+                        let score = undefined;
+                        for (const dbKey in DB.grades) {
+                            if (cleanStr(dbKey) === targetCleanKey && DB.grades[dbKey][s.id] !== undefined) {
+                                score = DB.grades[dbKey][s.id];
+                                break;
+                            }
+                        }
+
+                        if (score !== undefined) {
                             globalTotal += score; globalCount++;
                             if (score < 10) failCount++; else passCount++;
                             if (!subjectAverages[sub]) subjectAverages[sub] = { total: 0, count: 0 };
@@ -1295,55 +1329,6 @@
         }
 
         function exportExcel() { /* (مثل قبل) */ }
-        
-// --- توابع پشتیبان‌گیری و بازیابی ---
-function backupData() {
-    // ایجاد یک آبجکت از داده‌های فعلی موجود در حافظه
-    const backupObj = {
-        students: DB.students,
-        teachers: DB.teachers,
-        teacherAssignments: DB.teacherAssignments,
-        grades: DB.grades,
-        absences: DB.absences,
-        discipline: DB.discipline
-    };
-    
-    const dataStr = JSON.stringify(backupObj, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    const date = new Date().toLocaleDateString("fa-IR").replace(/\//g, "-");
-    link.download = `Backup_School_${date}.json`;
-    link.click();
-    showMsg("فایل پشتیبان با موفقیت دانلود شد.");
-}
-
-function restoreData(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const parsed = JSON.parse(e.target.result);
-            if (parsed.students && parsed.grades) {
-                // بازگردانی اطلاعات به حافظه
-                DB.students = parsed.students;
-                DB.teachers = parsed.teachers || [];
-                DB.teacherAssignments = parsed.teacherAssignments || [];
-                DB.grades = parsed.grades || {};
-                DB.absences = parsed.absences || {};
-                DB.discipline = parsed.discipline || {};
-                
-                // رفرش رابط کاربری
-                initUI();
-                renderTeachersList();
-                showMsg("اطلاعات با موفقیت در برنامه بازیابی شد (فقط در حافظه).", "success");
-            } else { showMsg("فایل نامعتبر است.", "error"); }
-        } catch (err) { showMsg("خطا در خواندن فایل.", "error"); }
-    };
-    reader.readAsText(file);
-    event.target.value = "";
-}
     </script>
 </body>
 </html>
