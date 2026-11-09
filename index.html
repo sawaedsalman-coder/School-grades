@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -437,12 +436,39 @@
             renderDisciplineTable();
         }
 
-        function getSubjectsForClass(cls) {
-            if (!cls) return DB.allSubjects;
-            if (cls.includes("نهم")) return DB.allSubjects.filter((sub) => sub !== "تفکر و سبک زندگی");
-            if (cls.includes("هفتم") || cls.includes("هشتم")) return DB.allSubjects.filter((sub) => sub !== "آمادگی دفاعی");
-            return DB.allSubjects;
+function getSubjectsForClass(cls) {
+    if (!cls) return DB.allSubjects;
+    
+    // لیست پایه بر اساس کلاس
+    let baseSubjects = [...DB.allSubjects];
+    if (cls.includes("نهم")) {
+        baseSubjects = baseSubjects.filter((sub) => sub !== "تفکر و سبک زندگی");
+    } else if (cls.includes("هفتم") || cls.includes("هشتم")) {
+        baseSubjects = baseSubjects.filter((sub) => sub !== "آمادگی دفاعی");
+    }
+    
+    // * بخش جدید: اضافه کردن درس‌هایی که نمره دارند اما در لیست پایه نیستند *
+    const extraSubjects = new Set();
+    
+    // جستجو در همه کلیدهای دیتابیس
+    for (const dbKey in DB.grades) {
+        // کلیدها به شکل "ماه_کلاس_درس" هستند
+        const parts = dbKey.split('_');
+        if (parts.length >= 3) {
+            const dbMonth = parts[0];
+            const dbClass = parts[1];
+            const dbSubject = parts.slice(2).join('_'); // اگر نام درس دارای _ باشد
+            
+            // اگر این نمره مربوط به همین کلاس بود و درسش در لیست پایه نبود
+            if (cleanStr(dbClass) === cleanStr(cls) && !baseSubjects.some(s => cleanStr(s) === cleanStr(dbSubject))) {
+                extraSubjects.add(dbSubject);
+            }
         }
+    }
+    
+    // ترکیب لیست پایه با درس‌های اضافی
+    return [...baseSubjects, ...Array.from(extraSubjects)];
+}
 
         function updateModalSubjects() {
             const cls = document.getElementById("modalClass").value;
