@@ -244,7 +244,7 @@
                 <div class="card">
                     <h3>ثبت نمرات توسط دبیر</h3>
                     <div class="row">
-                        <div class="field"><label>ماه</label><select id="gradeMonth" onchange="renderGradeTable()"></select></div>
+                        <div class="field"><label>ماه</label><select id="gradeMonth" onchange="loadGradeTableData()"></select></div>
                         <div class="field"><label>کلاس</label><select id="gradeClass" onchange="updateSubjectsAndRender()"></select></div>
                         <div class="field"><label>درس</label><select id="gradeSubject" onchange="renderGradeTable()"></select></div>
                         <button onclick="saveGrades()">ذخیره نمرات در سرور</button>
@@ -452,7 +452,27 @@
             const cls = document.getElementById("gradeClass").value;
             const subjects = getSubjectsForClass(cls);
             document.getElementById("gradeSubject").innerHTML = subjects.map((s) => `<option value="${s}">${s}</option>`).join("");
-            renderGradeTable();
+            loadGradeTableData();
+        }
+
+        async function loadGradeTableData() {
+            const month = document.getElementById("gradeMonth").value;
+            const cls = document.getElementById("gradeClass").value;
+            const container = document.getElementById("gradeTableContainer");
+            
+            if (!cls) {
+                container.innerHTML = "<p>کلاس را انتخاب کنید.</p>";
+                return;
+            }
+
+            container.innerHTML = '<p>در حال بارگذاری نمرات...</p>';
+            
+            try {
+                await fetchGradesForClass(month, cls);
+                renderGradeTable();
+            } catch (err) {
+                container.innerHTML = `<p style="color:red;">خطا در دریافت اطلاعات: ${err.message}</p>`;
+            }
         }
 
         // --- مدیریت دبیران ---
@@ -1367,12 +1387,19 @@
                 return; 
             }
 
-            if (!DB.cachedGrades) {
+            if (!DB.cachedGrades[`${month}_${cls}`]) {
                 container.innerHTML = "<p>در حال بارگذاری نمرات...</p>"; 
                 return;
             }
 
-            const currentGrades = DB.cachedGrades[`${month}_${cls}_${subject}`] || {};
+            const gradesData = DB.cachedGrades[`${month}_${cls}`];
+            const currentGrades = {};
+            gradesData.forEach(g => {
+                if (cleanStr(g.subject_name) === cleanStr(subject)) {
+                    currentGrades[g.student_id] = g.score;
+                }
+            });
+
             let html = `<table><thead><tr><th>ردیف</th><th>نام</th><th>نمره</th></tr></thead><tbody>`;
             students.forEach((s, i) => {
                 const val = currentGrades[s.id] !== undefined ? currentGrades[s.id] : "";
@@ -1433,7 +1460,7 @@
             } else {
                 showMsg(`تغییرات با موفقیت ذخیره شد. (${successCount} نمره)`, "success");
                 DB.cachedGrades = {};
-                loadFromServer();
+                loadGradeTableData();
             }
         }
 
