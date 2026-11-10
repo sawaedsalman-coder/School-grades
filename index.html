@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -283,6 +282,7 @@
             allSubjects: ["آموزش قرآن", "پیام‌های آسمان", "فارسی", "املا", "نگارش", "عربی", "زبان انگلیسی", "ریاضی", "علوم تجربی", "مطالعات اجتماعی", "فرهنگ و هنر", "کار و فناوری", "تفکر و سبک زندگی", "آمادگی دفاعی", "تربیت بدنی"],
             disciplineLevels: ["عالی", "خیلی خوب", "خوب", "قابل قبول", "نیازمند تلاش بیشتر"],
             months: ["مهر ۱۴۰۵", "آبان ۱۴۰۵", "آذر ۱۴۰۵", "دی ۱۴۰۵", "بهمن ۱۴۰۵", "اسفند ۱۴۰۵", "فروردین ۱۴۰۶", "اردیبهشت ۱۴۰۶"],
+            // کش کردن داده‌ها بر اساس کلید
             cachedGrades: {},
             cachedAbsences: {},
             cachedDiscipline: {}
@@ -1362,34 +1362,33 @@
         }
 
         // --- ثبت نمره در پنل دبیر (مدیر) ---
-       function renderGradeTable() {
-    const month = document.getElementById("gradeMonth").value;
-    const cls = document.getElementById("gradeClass").value;
-    const subject = document.getElementById("gradeSubject").value;
-    const students = DB.students.filter((s) => s.className === cls);
-    const container = document.getElementById("gradeTableContainer");
-    
-    if (!students.length || !subject) { 
-        container.innerHTML = "<p>داده‌ای نیست.</p>"; 
-        return; 
-    }
+        function renderGradeTable() {
+            const month = document.getElementById("gradeMonth").value;
+            const cls = document.getElementById("gradeClass").value;
+            const subject = document.getElementById("gradeSubject").value;
+            const students = DB.students.filter((s) => s.className === cls);
+            const container = document.getElementById("gradeTableContainer");
+            
+            if (!students.length || !subject) { 
+                container.innerHTML = "<p>داده‌ای نیست.</p>"; 
+                return; 
+            }
 
-    // بررسی اینکه آیا داده‌ها لود شده‌اند یا خیر
-    if (!DB.cachedGrades) {
-        container.innerHTML = "<p>در حال بارگذاری نمرات...</p>"; 
-        return;
-    }
+            if (!DB.cachedGrades) {
+                container.innerHTML = "<p>در حال بارگذاری نمرات...</p>"; 
+                return;
+            }
 
-    const currentGrades = DB.cachedGrades[${month}_${cls}_${subject}] || {};
-    let html = <table><thead><tr><th>ردیف</th><th>نام</th><th>نمره</th></tr></thead><tbody>;
-    students.forEach((s, i) => {
-        const val = currentGrades[s.id] !== undefined ? currentGrades[s.id] : "";
-        html += <tr data-id="${s.id}"><td>${i + 1}</td><td>${s.first} ${s.last}</td>
-            <td><input type="number" class="score-input" min="0" max="20" step="0.25" value="${val}" placeholder="—"></td>
-        </tr>;
-    });
-    container.innerHTML = html + </tbody></table>;
-}
+            const currentGrades = DB.cachedGrades[`${month}_${cls}_${subject}`] || {};
+            let html = `<table><thead><tr><th>ردیف</th><th>نام</th><th>نمره</th></tr></thead><tbody>`;
+            students.forEach((s, i) => {
+                const val = currentGrades[s.id] !== undefined ? currentGrades[s.id] : "";
+                html += `<tr data-id="${s.id}"><td>${i + 1}</td><td>${s.first} ${s.last}</td>
+                    <td><input type="number" class="score-input" min="0" max="20" step="0.25" value="${val}" placeholder="—"></td>
+                </tr>`;
+            });
+            container.innerHTML = html + `</tbody></table>`;
+        }
 
         async function saveGrades() {
             const month = document.getElementById("gradeMonth").value;
@@ -1454,7 +1453,7 @@
             const wsData = [["نام", "نام خانوادگی", "نمره"]];
             students.forEach((s) => {
                 const existingKey = `${month}_${cls}_${subject}`;
-                const existingScore = (DB.grades[existingKey] && DB.grades[existingKey][s.id] !== undefined) ? DB.grades[existingKey][s.id] : "";
+                const existingScore = (DB.cachedGrades[existingKey] && DB.cachedGrades[existingKey][s.id] !== undefined) ? DB.cachedGrades[existingKey][s.id] : "";
                 wsData.push([s.first, s.last, existingScore]);
             });
             const ws = XLSX.utils.aoa_to_sheet(wsData);
