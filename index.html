@@ -452,7 +452,7 @@
             const cls = document.getElementById("gradeClass").value;
             const subjects = getSubjectsForClass(cls);
             document.getElementById("gradeSubject").innerHTML = subjects.map((s) => `<option value="${s}">${s}</option>`).join("");
-            loadGradeTableData();
+            loadGradeTableData(); // دریافت نمرات پس از تغییر کلاس
         }
 
         async function loadGradeTableData() {
@@ -460,18 +460,14 @@
             const cls = document.getElementById("gradeClass").value;
             const container = document.getElementById("gradeTableContainer");
             
-            if (!cls) {
-                container.innerHTML = "<p>کلاس را انتخاب کنید.</p>";
-                return;
-            }
-
-            container.innerHTML = '<p>در حال بارگذاری نمرات...</p>';
+            if (!cls) { container.innerHTML = "<p>کلاس را انتخاب کنید.</p>"; return; }
+            container.innerHTML = '<p>در حال بارگذاری نمرات از سرور...</p>';
             
             try {
-                await fetchGradesForClass(month, cls);
-                renderGradeTable();
+                await fetchGradesForClass(month, cls); // دریافت از سرور و کش
+                renderGradeTable(); // رسم جدول با داده‌های جدید
             } catch (err) {
-                container.innerHTML = `<p style="color:red;">خطا در دریافت اطلاعات: ${err.message}</p>`;
+                container.innerHTML = `<p style="color:red;">خطا: ${err.message}</p>`;
             }
         }
 
