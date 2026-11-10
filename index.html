@@ -13,14 +13,12 @@
         body { font-family: "Vazirmatn", Tahoma, Arial, sans-serif; margin: 0; background: var(--bg); color: #183044; }
         header { background: linear-gradient(120deg, #125b99, #268bc0); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
         header h1 { margin: 0; font-size: 20px; }
-
         .main-wrapper { display: flex; max-width: 1200px; margin: 20px auto; padding: 0 15px; gap: 20px; }
         .sidebar { width: 250px; flex-shrink: 0; }
         .sidebar-menu { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); margin-bottom: 15px; }
         .sidebar-menu button { display: block; width: 100%; text-align: right; padding: 15px 20px; border: none; background: none; border-bottom: 1px solid var(--line); font-family: inherit; font-size: 14px; cursor: pointer; color: #40596c; transition: background 0.2s; }
         .sidebar-menu button:hover { background: #f0f5f9; }
         .sidebar-menu button.active { background: #eaf4fb; color: var(--blue); font-weight: bold; border-right: 4px solid var(--blue); }
-
         .content-area { flex-grow: 1; min-width: 0; }
         .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); }
         .row { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 15px; }
@@ -46,21 +44,17 @@
         .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 12px; color: white; }
         .badge-active { background: #28a745; }
         .badge-inactive { background: #dc3545; }
-
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 4000; }
         .modal-content { background: white; padding: 25px; border-radius: 10px; width: 450px; max-width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .modal-content h3 { margin-top: 0; color: var(--blue); }
-
         #loginScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; }
         .login-box { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); text-align: center; width: 300px; }
         .login-box h2 { margin-top: 0; color: var(--blue); }
         .login-box input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 6px; text-align: center; font-size: 18px; letter-spacing: 5px; box-sizing: border-box; }
-
         #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 5000; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 14px; opacity: 0; transition: opacity 0.3s, visibility 0.3s; }
         #toast.show { visibility: visible; opacity: 1; }
         #toast.success { background-color: #28a745; }
         #toast.error { background-color: #dc3545; }
-
         @media (max-width: 768px) {
             .main-wrapper { flex-direction: column; }
             .sidebar { width: 100%; }
@@ -282,7 +276,6 @@
             allSubjects: ["آموزش قرآن", "پیام‌های آسمان", "فارسی", "املا", "نگارش", "عربی", "زبان انگلیسی", "ریاضی", "علوم تجربی", "مطالعات اجتماعی", "فرهنگ و هنر", "کار و فناوری", "تفکر و سبک زندگی", "آمادگی دفاعی", "تربیت بدنی"],
             disciplineLevels: ["عالی", "خیلی خوب", "خوب", "قابل قبول", "نیازمند تلاش بیشتر"],
             months: ["مهر ۱۴۰۵", "آبان ۱۴۰۵", "آذر ۱۴۰۵", "دی ۱۴۰۵", "بهمن ۱۴۰۵", "اسفند ۱۴۰۵", "فروردین ۱۴۰۶", "اردیبهشت ۱۴۰۶"],
-            // کش کردن داده‌ها بر اساس کلید
             cachedGrades: {},
             cachedAbsences: {},
             cachedDiscipline: {}
