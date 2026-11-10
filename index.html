@@ -1362,24 +1362,34 @@
         }
 
         // --- ثبت نمره در پنل دبیر (مدیر) ---
-        function renderGradeTable() {
-            const month = document.getElementById("gradeMonth").value;
-            const cls = document.getElementById("gradeClass").value;
-            const subject = document.getElementById("gradeSubject").value;
-            const students = DB.students.filter((s) => s.className === cls);
-            const container = document.getElementById("gradeTableContainer");
-            if (!students.length || !subject) { container.innerHTML = "<p>داده‌ای نیست.</p>"; return; }
+       function renderGradeTable() {
+    const month = document.getElementById("gradeMonth").value;
+    const cls = document.getElementById("gradeClass").value;
+    const subject = document.getElementById("gradeSubject").value;
+    const students = DB.students.filter((s) => s.className === cls);
+    const container = document.getElementById("gradeTableContainer");
+    
+    if (!students.length || !subject) { 
+        container.innerHTML = "<p>داده‌ای نیست.</p>"; 
+        return; 
+    }
 
-            const currentGrades = DB.grades[`${month}_${cls}_${subject}`] || {};
-            let html = `<table><thead><tr><th>ردیف</th><th>نام</th><th>نمره</th></tr></thead><tbody>`;
-            students.forEach((s, i) => {
-                const val = currentGrades[s.id] !== undefined ? currentGrades[s.id] : "";
-                html += `<tr data-id="${s.id}"><td>${i + 1}</td><td>${s.first} ${s.last}</td>
-                    <td><input type="number" class="score-input" min="0" max="20" step="0.25" value="${val}" placeholder="—"></td>
-                </tr>`;
-            });
-            container.innerHTML = html + `</tbody></table>`;
-        }
+    // بررسی اینکه آیا داده‌ها لود شده‌اند یا خیر
+    if (!DB.cachedGrades) {
+        container.innerHTML = "<p>در حال بارگذاری نمرات...</p>"; 
+        return;
+    }
+
+    const currentGrades = DB.cachedGrades[${month}_${cls}_${subject}] || {};
+    let html = <table><thead><tr><th>ردیف</th><th>نام</th><th>نمره</th></tr></thead><tbody>;
+    students.forEach((s, i) => {
+        const val = currentGrades[s.id] !== undefined ? currentGrades[s.id] : "";
+        html += <tr data-id="${s.id}"><td>${i + 1}</td><td>${s.first} ${s.last}</td>
+            <td><input type="number" class="score-input" min="0" max="20" step="0.25" value="${val}" placeholder="—"></td>
+        </tr>;
+    });
+    container.innerHTML = html + </tbody></table>;
+}
 
         async function saveGrades() {
             const month = document.getElementById("gradeMonth").value;
